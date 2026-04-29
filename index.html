@@ -205,137 +205,157 @@
   /* ─── TOUCH CONTROLS ─── */
   #touch-controls {
     display: none;
-    position: absolute;
+    position: fixed;
     bottom: 0; left: 0; right: 0;
-    height: 220px;
     z-index: 20;
-    pointer-events: none;
+    background: linear-gradient(to bottom, rgba(5,5,10,0.0) 0%, rgba(5,5,10,0.95) 15%, rgba(5,5,10,0.98) 100%);
+    padding: 6px 16px calc(env(safe-area-inset-bottom, 8px) + 8px) 16px;
+  }
+
+  #mobile-msg {
+    font-size: 10px;
+    font-family: 'JetBrains Mono', monospace;
+    color: #71717a;
+    padding: 0 4px 6px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    height: 20px;
+  }
+  #mobile-msg.combat { color: #f87171; }
+  #mobile-msg.pickup { color: #34d399; }
+  #mobile-msg.level { color: #c084fc; }
+  #mobile-msg.descend { color: #fbbf24; }
+
+  #mobile-inv-row {
+    display: flex;
+    gap: 5px;
+    justify-content: center;
+    padding-bottom: 8px;
+  }
+
+  #mobile-inv-row .inv-slot {
+    width: 38px; height: 38px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    font-family: 'JetBrains Mono', monospace;
+    pointer-events: auto;
+    -webkit-tap-highlight-color: transparent;
+  }
+  #mobile-inv-row .inv-slot.has-item { border-color: rgba(255, 180, 60, 0.3); }
+
+  #controls-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
   }
 
   #dpad {
-    position: absolute;
-    left: 24px;
-    bottom: 24px;
-    width: 150px;
-    height: 150px;
-    pointer-events: auto;
+    width: 136px;
+    height: 136px;
+    position: relative;
+    flex-shrink: 0;
   }
 
   .dpad-btn {
     position: absolute;
-    width: 50px; height: 50px;
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 12px;
+    width: 44px; height: 44px;
+    background: rgba(255, 255, 255, 0.07);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 11px;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: rgba(255, 255, 255, 0.5);
-    font-size: 20px;
+    color: rgba(255, 255, 255, 0.45);
+    font-size: 18px;
     -webkit-tap-highlight-color: transparent;
     touch-action: manipulation;
-    transition: background 0.1s;
+    transition: background 0.08s;
   }
 
   .dpad-btn:active, .dpad-btn.pressed {
-    background: rgba(255, 180, 60, 0.2);
-    border-color: rgba(255, 180, 60, 0.4);
+    background: rgba(255, 180, 60, 0.25);
+    border-color: rgba(255, 180, 60, 0.5);
     color: #fbbf24;
   }
 
-  .dpad-up    { top: 0;   left: 50px; }
-  .dpad-down  { bottom: 0; left: 50px; }
-  .dpad-left  { top: 50px; left: 0; }
-  .dpad-right { top: 50px; right: 0; }
+  .dpad-up    { top: 0;    left: 46px; }
+  .dpad-down  { bottom: 0; left: 46px; }
+  .dpad-left  { top: 46px; left: 0; }
+  .dpad-right { top: 46px; right: 0; }
 
   #action-buttons {
-    position: absolute;
-    right: 24px;
-    bottom: 24px;
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    pointer-events: auto;
+    gap: 6px;
+    align-items: flex-end;
+    flex-shrink: 0;
   }
 
   .action-row {
     display: flex;
-    gap: 8px;
-    justify-content: flex-end;
+    gap: 6px;
   }
 
   .action-btn {
-    width: 50px; height: 50px;
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 12px;
+    width: 52px; height: 52px;
+    background: rgba(255, 255, 255, 0.07);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 13px;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: rgba(255, 255, 255, 0.5);
+    color: rgba(255, 255, 255, 0.45);
     font-size: 11px;
     font-weight: 700;
     font-family: 'JetBrains Mono', monospace;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
     -webkit-tap-highlight-color: transparent;
     touch-action: manipulation;
-    transition: background 0.1s;
+    transition: background 0.08s;
   }
 
   .action-btn:active, .action-btn.pressed {
-    background: rgba(255, 180, 60, 0.2);
-    border-color: rgba(255, 180, 60, 0.4);
+    background: rgba(255, 180, 60, 0.25);
+    border-color: rgba(255, 180, 60, 0.5);
     color: #fbbf24;
   }
 
-  .action-btn.pickup { color: rgba(52, 211, 153, 0.7); border-color: rgba(52, 211, 153, 0.2); }
-  .action-btn.stairs { color: rgba(251, 191, 36, 0.7); border-color: rgba(251, 191, 36, 0.2); }
+  .action-btn.pickup { color: rgba(52, 211, 153, 0.6); border-color: rgba(52, 211, 153, 0.2); }
+  .action-btn.stairs { color: rgba(251, 191, 36, 0.6); border-color: rgba(251, 191, 36, 0.2); }
 
   /* ─── MOBILE RESPONSIVE ─── */
   @media (max-width: 768px) {
     #touch-controls { display: block; }
+    #minimap-container { display: none; }
+    #inventory-bar { display: none; }
+    #message-log { display: none; }
 
     #stats-panel {
-      top: 8px; left: 8px;
-      padding: 10px 12px;
-      min-width: 160px;
+      top: env(safe-area-inset-top, 6px);
+      left: 6px; right: 6px;
+      padding: 6px 10px;
+      min-width: unset;
       border-radius: 10px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0 10px;
     }
-    .stat-title { font-size: 9px; margin-bottom: 6px; letter-spacing: 1.5px; }
-    .hp-bar-container { height: 14px; margin-bottom: 4px; }
-    .hp-bar-text { font-size: 9px; }
-    .xp-bar-container { height: 5px; margin-bottom: 6px; }
-    .stat-row { font-size: 10px; margin-bottom: 2px; }
-
-    #minimap-container {
-      top: 8px; right: 8px;
-      padding: 6px;
-      border-radius: 10px;
-    }
-    #minimap-label { font-size: 8px; margin-bottom: 4px; }
-    #minimap { width: 80px; height: 54px; }
-
-    #inventory-bar {
-      bottom: 230px;
-      padding: 6px 8px;
+    .stat-title { display: none; }
+    .hp-bar-container { width: 100%; height: 12px; margin-bottom: 2px; }
+    .hp-bar-text { font-size: 8px; }
+    .xp-bar-container { width: 100%; height: 4px; margin-bottom: 4px; }
+    .stat-row {
+      font-size: 9px;
+      margin-bottom: 0;
       gap: 4px;
     }
-    .inv-slot {
-      width: 34px; height: 34px;
-      font-size: 15px;
-      pointer-events: auto;
-      cursor: pointer;
-    }
-
-    #message-log {
-      bottom: 230px;
-      left: 8px; right: 8px;
-      padding: 8px 10px;
-      max-width: none;
-      transform: translateY(-56px);
-    }
-    .msg-line { font-size: 10px; line-height: 1.4; }
 
     .title-text { font-size: 28px; letter-spacing: 4px; }
     .title-sub { font-size: 10px; letter-spacing: 3px; margin-bottom: 30px; }
@@ -343,14 +363,6 @@
     .title-controls { font-size: 10px; margin-top: 24px; }
     .death-title, .win-title { font-size: 28px; letter-spacing: 3px; }
     .death-stat { font-size: 12px; }
-  }
-
-  @media (max-width: 400px) {
-    #stats-panel { min-width: 130px; padding: 8px 10px; }
-    .stat-title { font-size: 8px; }
-    .stat-row { font-size: 9px; }
-    #minimap-container { display: none; }
-    .title-text { font-size: 22px; }
   }
 
   /* Title Screen */
@@ -535,17 +547,23 @@
 </div>
 
 <div id="touch-controls">
-  <div id="dpad">
-    <div class="dpad-btn dpad-up" data-dir="up">▲</div>
-    <div class="dpad-btn dpad-left" data-dir="left">◀</div>
-    <div class="dpad-btn dpad-right" data-dir="right">▶</div>
-    <div class="dpad-btn dpad-down" data-dir="down">▼</div>
-  </div>
-  <div id="action-buttons">
-    <div class="action-row">
-      <div class="action-btn pickup" data-action="pickup">Pick</div>
-      <div class="action-btn stairs" data-action="stairs">▼▼</div>
-      <div class="action-btn" data-action="wait">Wait</div>
+  <div id="mobile-msg"></div>
+  <div id="mobile-inv-row"></div>
+  <div id="controls-row">
+    <div id="dpad">
+      <div class="dpad-btn dpad-up" data-dir="up">▲</div>
+      <div class="dpad-btn dpad-left" data-dir="left">◀</div>
+      <div class="dpad-btn dpad-right" data-dir="right">▶</div>
+      <div class="dpad-btn dpad-down" data-dir="down">▼</div>
+    </div>
+    <div id="action-buttons">
+      <div class="action-row">
+        <div class="action-btn pickup" data-action="pickup">Pick</div>
+        <div class="action-btn stairs" data-action="stairs">▼▼</div>
+      </div>
+      <div class="action-row">
+        <div class="action-btn" data-action="wait">Wait</div>
+      </div>
     </div>
   </div>
 </div>
@@ -612,6 +630,9 @@ const ITEM_DEFS = [
   { name: 'Fire Scroll',     ch: '?', color: '#f97316', type: 'scroll',  effect: 'fireball',value: 15 },
   { name: 'Blink Scroll',    ch: '?', color: '#38bdf8', type: 'scroll',  effect: 'blink',   value: 0  },
 ];
+
+// ─── PLATFORM DETECT ────────────────────────────
+const isMobile = /Android|iPhone|iPad|iPod|webOS/i.test(navigator.userAgent) || ('ontouchstart' in window && window.innerWidth < 900);
 
 // ─── UTILS ──────────────────────────────────────
 function rand(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
@@ -951,6 +972,7 @@ function tryMove(dx, dy) {
   state.player.y = ny;
   addMoveAnim(state.player, oldX, oldY);
 
+  if (isMobile) autoPickup();
   endTurn();
 }
 
@@ -999,6 +1021,15 @@ function gainXP(amount) {
     addMessage(`Level up! You are now level ${state.player.level}!`, 'level');
     spawnParticles(state.player.x, state.player.y, 25, '#c084fc', 3, 30);
   }
+}
+
+function autoPickup() {
+  const idx = state.groundItems.findIndex(i => i.x === state.player.x && i.y === state.player.y);
+  if (idx === -1 || state.inventory.length >= CFG.INV_SIZE) return;
+  const item = state.groundItems.splice(idx, 1)[0];
+  state.inventory.push(item);
+  addMessage(`Picked up ${item.name}.`, 'pickup');
+  spawnParticles(state.player.x, state.player.y, 10, item.color, 2, 20);
 }
 
 function pickupItem() {
@@ -1156,8 +1187,9 @@ function render(time) {
     if (state.screenShake < 0.5) state.screenShake = 0;
   }
 
+  const mobileShift = isMobile ? ch * 0.12 : 0;
   const offsetX = cw / 2 - state.camera.x * T - T / 2 + shakeX;
-  const offsetY = ch / 2 - state.camera.y * T - T / 2 + shakeY;
+  const offsetY = ch / 2 - state.camera.y * T - T / 2 + shakeY - mobileShift;
 
   ctx.fillStyle = COLORS.bg;
   ctx.fillRect(0, 0, cw, ch);
@@ -1419,7 +1451,8 @@ function render(time) {
 
   // --- Update UI ---
   updateUI();
-  renderMinimap();
+  if (!isMobile) renderMinimap();
+  if (isMobile) updateMobileUI();
 }
 
 function renderTitleBG(time) {
@@ -1523,6 +1556,30 @@ function showWinScreen() {
   `;
 }
 
+function updateMobileUI() {
+  const msgEl = document.getElementById('mobile-msg');
+  if (state.messages.length > 0) {
+    const m = state.messages[0];
+    msgEl.textContent = m.text;
+    msgEl.className = m.type;
+  } else {
+    msgEl.textContent = '';
+    msgEl.className = '';
+  }
+
+  const invRow = document.getElementById('mobile-inv-row');
+  let html = '';
+  for (let i = 0; i < CFG.INV_SIZE; i++) {
+    const item = state.inventory[i];
+    if (item) {
+      html += `<div class="inv-slot has-item" data-slot="${i}"><span style="color:${item.color}">${item.ch}</span></div>`;
+    } else {
+      html += `<div class="inv-slot" data-slot="${i}"></div>`;
+    }
+  }
+  invRow.innerHTML = html;
+}
+
 // ─── INPUT ──────────────────────────────────────
 const KEY_MAP = {
   ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowLeft: [-1, 0], ArrowRight: [1, 0],
@@ -1590,8 +1647,6 @@ setInterval(() => {
 }, 1000 / 30);
 
 // ─── MOBILE / TOUCH ─────────────────────────────
-const isMobile = /Android|iPhone|iPad|iPod|webOS/i.test(navigator.userAgent) || ('ontouchstart' in window && window.innerWidth < 900);
-
 if (isMobile) {
   document.getElementById('title-prompt-text').textContent = 'Tap to begin';
   document.getElementById('title-controls-text').innerHTML =
@@ -1652,14 +1707,22 @@ document.querySelectorAll('.action-btn').forEach(btn => {
   });
 });
 
-// Tappable inventory slots on mobile
-document.getElementById('inventory-bar').addEventListener('touchstart', (e) => {
+// Mobile inventory tap
+document.getElementById('mobile-inv-row').addEventListener('touchstart', (e) => {
   const slot = e.target.closest('.inv-slot');
   if (!slot || gamePhase !== 'playing') return;
   e.preventDefault();
-  const idx = Array.from(slot.parentElement.children).indexOf(slot);
+  const idx = parseInt(slot.dataset.slot);
   if (idx >= 0 && idx < state.inventory.length) useItem(idx);
 }, { passive: false });
+
+// Desktop inventory tap fallback
+document.getElementById('inventory-bar').addEventListener('click', (e) => {
+  const slot = e.target.closest('.inv-slot');
+  if (!slot || gamePhase !== 'playing') return;
+  const idx = Array.from(slot.parentElement.children).indexOf(slot);
+  if (idx >= 0 && idx < state.inventory.length) useItem(idx);
+});
 
 // Title/death/win screen tap
 function handleScreenTap(e) {
@@ -1680,8 +1743,34 @@ document.getElementById('title-screen').addEventListener('touchstart', handleScr
 document.getElementById('death-screen').addEventListener('touchstart', handleScreenTap, { passive: false });
 document.getElementById('win-screen').addEventListener('touchstart', handleScreenTap, { passive: false });
 
-// Prevent zoom/scroll on game canvas
-document.addEventListener('touchmove', (e) => { if (e.target === canvas) e.preventDefault(); }, { passive: false });
+// Swipe gestures on game canvas
+let swipeStart = null;
+const SWIPE_THRESHOLD = 30;
+
+canvas.addEventListener('touchstart', (e) => {
+  if (gamePhase !== 'playing') return;
+  if (e.touches.length !== 1) return;
+  swipeStart = { x: e.touches[0].clientX, y: e.touches[0].clientY, t: Date.now() };
+}, { passive: true });
+
+canvas.addEventListener('touchend', (e) => {
+  if (!swipeStart || gamePhase !== 'playing') return;
+  const dx = e.changedTouches[0].clientX - swipeStart.x;
+  const dy = e.changedTouches[0].clientY - swipeStart.y;
+  const dt = Date.now() - swipeStart.t;
+  swipeStart = null;
+  if (dt > 500) return;
+  const absDx = Math.abs(dx), absDy = Math.abs(dy);
+  if (absDx < SWIPE_THRESHOLD && absDy < SWIPE_THRESHOLD) return;
+  if (absDx > absDy) {
+    tryMove(dx > 0 ? 1 : -1, 0);
+  } else {
+    tryMove(0, dy > 0 ? 1 : -1);
+  }
+}, { passive: true });
+
+// Prevent zoom/scroll
+document.addEventListener('touchmove', (e) => { e.preventDefault(); }, { passive: false });
 
 // ─── INIT ───────────────────────────────────────
 window.addEventListener('resize', resize);

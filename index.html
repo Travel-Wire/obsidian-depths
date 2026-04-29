@@ -1,0 +1,1692 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
+<title>Obsidian Depths</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400;700&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #05050a;
+    color: #e0e0e0;
+    font-family: 'Inter', system-ui, sans-serif;
+    overflow: hidden;
+    width: 100vw;
+    height: 100vh;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: none;
+    -webkit-touch-callout: none;
+  }
+
+  canvas {
+    display: block;
+    position: absolute;
+    top: 0; left: 0;
+    width: 100vw;
+    height: 100vh;
+  }
+
+  #ui-overlay {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    pointer-events: none;
+    z-index: 10;
+  }
+
+  #stats-panel {
+    position: absolute;
+    top: 16px; left: 16px;
+    background: rgba(8, 8, 16, 0.85);
+    border: 1px solid rgba(255, 180, 60, 0.2);
+    border-radius: 12px;
+    padding: 14px 18px;
+    min-width: 220px;
+    backdrop-filter: blur(8px);
+  }
+
+  .stat-title {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: #f59e0b;
+    margin-bottom: 10px;
+  }
+
+  .hp-bar-container {
+    width: 100%;
+    height: 18px;
+    background: rgba(255, 255, 255, 0.06);
+    border-radius: 9px;
+    overflow: hidden;
+    margin-bottom: 6px;
+    position: relative;
+  }
+
+  .hp-bar-fill {
+    height: 100%;
+    border-radius: 9px;
+    transition: width 0.4s ease;
+    background: linear-gradient(90deg, #ef4444, #f97316);
+  }
+
+  .hp-bar-text {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+    color: white;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .xp-bar-container {
+    width: 100%;
+    height: 8px;
+    background: rgba(255, 255, 255, 0.06);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 10px;
+  }
+
+  .xp-bar-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.4s ease;
+    background: linear-gradient(90deg, #8b5cf6, #a78bfa);
+  }
+
+  .stat-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    margin-bottom: 4px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .stat-label { color: #71717a; }
+  .stat-value { color: #d4d4d8; font-weight: 600; }
+  .stat-value.atk { color: #f87171; }
+  .stat-value.def { color: #60a5fa; }
+  .stat-value.floor { color: #fbbf24; }
+
+  #message-log {
+    position: absolute;
+    bottom: 16px; left: 16px; right: 16px;
+    max-width: 700px;
+    background: rgba(8, 8, 16, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 12px;
+    padding: 12px 16px;
+    backdrop-filter: blur(8px);
+  }
+
+  .msg-line {
+    font-size: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    line-height: 1.6;
+    opacity: 1;
+    transition: opacity 0.3s;
+  }
+
+  .msg-line.old { opacity: 0.4; }
+  .msg-combat { color: #f87171; }
+  .msg-pickup { color: #34d399; }
+  .msg-info { color: #94a3b8; }
+  .msg-level { color: #c084fc; }
+  .msg-descend { color: #fbbf24; }
+
+  #minimap-container {
+    position: absolute;
+    top: 16px; right: 16px;
+    background: rgba(8, 8, 16, 0.85);
+    border: 1px solid rgba(255, 180, 60, 0.15);
+    border-radius: 12px;
+    padding: 10px;
+    backdrop-filter: blur(8px);
+  }
+
+  #minimap-label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: #f59e0b;
+    margin-bottom: 6px;
+    text-align: center;
+  }
+
+  #inventory-bar {
+    position: absolute;
+    bottom: 80px; left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 6px;
+    background: rgba(8, 8, 16, 0.85);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 8px 12px;
+    backdrop-filter: blur(8px);
+  }
+
+  .inv-slot {
+    width: 40px; height: 40px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    font-size: 18px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .inv-slot .key-hint {
+    position: absolute;
+    top: 2px; left: 4px;
+    font-size: 8px;
+    color: #525252;
+    font-weight: 700;
+  }
+
+  .inv-slot.has-item { border-color: rgba(255, 180, 60, 0.3); }
+
+  /* ─── TOUCH CONTROLS ─── */
+  #touch-controls {
+    display: none;
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 220px;
+    z-index: 20;
+    pointer-events: none;
+  }
+
+  #dpad {
+    position: absolute;
+    left: 24px;
+    bottom: 24px;
+    width: 150px;
+    height: 150px;
+    pointer-events: auto;
+  }
+
+  .dpad-btn {
+    position: absolute;
+    width: 50px; height: 50px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 20px;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    transition: background 0.1s;
+  }
+
+  .dpad-btn:active, .dpad-btn.pressed {
+    background: rgba(255, 180, 60, 0.2);
+    border-color: rgba(255, 180, 60, 0.4);
+    color: #fbbf24;
+  }
+
+  .dpad-up    { top: 0;   left: 50px; }
+  .dpad-down  { bottom: 0; left: 50px; }
+  .dpad-left  { top: 50px; left: 0; }
+  .dpad-right { top: 50px; right: 0; }
+
+  #action-buttons {
+    position: absolute;
+    right: 24px;
+    bottom: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    pointer-events: auto;
+  }
+
+  .action-row {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+  }
+
+  .action-btn {
+    width: 50px; height: 50px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 11px;
+    font-weight: 700;
+    font-family: 'JetBrains Mono', monospace;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    transition: background 0.1s;
+  }
+
+  .action-btn:active, .action-btn.pressed {
+    background: rgba(255, 180, 60, 0.2);
+    border-color: rgba(255, 180, 60, 0.4);
+    color: #fbbf24;
+  }
+
+  .action-btn.pickup { color: rgba(52, 211, 153, 0.7); border-color: rgba(52, 211, 153, 0.2); }
+  .action-btn.stairs { color: rgba(251, 191, 36, 0.7); border-color: rgba(251, 191, 36, 0.2); }
+
+  /* ─── MOBILE RESPONSIVE ─── */
+  @media (max-width: 768px) {
+    #touch-controls { display: block; }
+
+    #stats-panel {
+      top: 8px; left: 8px;
+      padding: 10px 12px;
+      min-width: 160px;
+      border-radius: 10px;
+    }
+    .stat-title { font-size: 9px; margin-bottom: 6px; letter-spacing: 1.5px; }
+    .hp-bar-container { height: 14px; margin-bottom: 4px; }
+    .hp-bar-text { font-size: 9px; }
+    .xp-bar-container { height: 5px; margin-bottom: 6px; }
+    .stat-row { font-size: 10px; margin-bottom: 2px; }
+
+    #minimap-container {
+      top: 8px; right: 8px;
+      padding: 6px;
+      border-radius: 10px;
+    }
+    #minimap-label { font-size: 8px; margin-bottom: 4px; }
+    #minimap { width: 80px; height: 54px; }
+
+    #inventory-bar {
+      bottom: 230px;
+      padding: 6px 8px;
+      gap: 4px;
+    }
+    .inv-slot {
+      width: 34px; height: 34px;
+      font-size: 15px;
+      pointer-events: auto;
+      cursor: pointer;
+    }
+
+    #message-log {
+      bottom: 230px;
+      left: 8px; right: 8px;
+      padding: 8px 10px;
+      max-width: none;
+      transform: translateY(-56px);
+    }
+    .msg-line { font-size: 10px; line-height: 1.4; }
+
+    .title-text { font-size: 28px; letter-spacing: 4px; }
+    .title-sub { font-size: 10px; letter-spacing: 3px; margin-bottom: 30px; }
+    .title-prompt { font-size: 14px; }
+    .title-controls { font-size: 10px; margin-top: 24px; }
+    .death-title, .win-title { font-size: 28px; letter-spacing: 3px; }
+    .death-stat { font-size: 12px; }
+  }
+
+  @media (max-width: 400px) {
+    #stats-panel { min-width: 130px; padding: 8px 10px; }
+    .stat-title { font-size: 8px; }
+    .stat-row { font-size: 9px; }
+    #minimap-container { display: none; }
+    .title-text { font-size: 22px; }
+  }
+
+  /* Title Screen */
+  #title-screen {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: #05050a;
+    transition: opacity 0.8s ease;
+  }
+
+  #title-screen.hidden { opacity: 0; pointer-events: none; }
+
+  .title-text {
+    font-size: 64px;
+    font-weight: 700;
+    letter-spacing: 8px;
+    text-transform: uppercase;
+    background: linear-gradient(135deg, #f59e0b, #ef4444, #f59e0b);
+    background-size: 200% 200%;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: titleGlow 4s ease infinite;
+    text-shadow: none;
+    margin-bottom: 8px;
+  }
+
+  @keyframes titleGlow {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+  }
+
+  .title-sub {
+    font-size: 14px;
+    letter-spacing: 6px;
+    text-transform: uppercase;
+    color: #52525b;
+    margin-bottom: 60px;
+  }
+
+  .title-prompt {
+    font-size: 16px;
+    color: #71717a;
+    animation: pulse 2s ease infinite;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 0.4; }
+    50% { opacity: 1; }
+  }
+
+  .title-controls {
+    margin-top: 40px;
+    text-align: center;
+    color: #3f3f46;
+    font-size: 12px;
+    line-height: 2;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .title-controls span { color: #71717a; }
+
+  /* Death Screen */
+  #death-screen {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    z-index: 100;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: rgba(5, 5, 10, 0.95);
+  }
+
+  #death-screen.show { display: flex; }
+
+  .death-title {
+    font-size: 48px;
+    font-weight: 700;
+    letter-spacing: 6px;
+    color: #ef4444;
+    text-shadow: 0 0 40px rgba(239, 68, 68, 0.4);
+    margin-bottom: 30px;
+  }
+
+  .death-stats {
+    text-align: center;
+    margin-bottom: 40px;
+  }
+
+  .death-stat {
+    font-size: 14px;
+    font-family: 'JetBrains Mono', monospace;
+    color: #71717a;
+    margin-bottom: 8px;
+  }
+
+  .death-stat span { color: #d4d4d8; font-weight: 600; }
+
+  /* Win Screen */
+  #win-screen {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    z-index: 100;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: rgba(5, 5, 10, 0.95);
+  }
+
+  #win-screen.show { display: flex; }
+
+  .win-title {
+    font-size: 48px;
+    font-weight: 700;
+    letter-spacing: 6px;
+    background: linear-gradient(135deg, #fbbf24, #f59e0b);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 30px;
+  }
+</style>
+</head>
+<body>
+
+<canvas id="game"></canvas>
+
+<div id="ui-overlay">
+  <div id="stats-panel">
+    <div class="stat-title">Obsidian Depths</div>
+    <div class="hp-bar-container">
+      <div class="hp-bar-fill" id="hp-fill"></div>
+      <div class="hp-bar-text" id="hp-text">20 / 20</div>
+    </div>
+    <div class="xp-bar-container">
+      <div class="xp-bar-fill" id="xp-fill"></div>
+    </div>
+    <div class="stat-row"><span class="stat-label">LEVEL</span><span class="stat-value" id="s-level">1</span></div>
+    <div class="stat-row"><span class="stat-label">ATK</span><span class="stat-value atk" id="s-atk">3</span></div>
+    <div class="stat-row"><span class="stat-label">DEF</span><span class="stat-value def" id="s-def">1</span></div>
+    <div class="stat-row"><span class="stat-label">FLOOR</span><span class="stat-value floor" id="s-floor">1</span></div>
+    <div class="stat-row"><span class="stat-label">KILLS</span><span class="stat-value" id="s-kills">0</span></div>
+  </div>
+
+  <div id="minimap-container">
+    <div id="minimap-label">MAP</div>
+    <canvas id="minimap" width="120" height="80"></canvas>
+  </div>
+
+  <div id="inventory-bar"></div>
+
+  <div id="message-log"></div>
+</div>
+
+<div id="title-screen">
+  <div class="title-text">Obsidian Depths</div>
+  <div class="title-sub">A Roguelike Dungeon Crawler</div>
+  <div class="title-prompt" id="title-prompt-text">Press ENTER or SPACE to begin</div>
+  <div class="title-controls" id="title-controls-text">
+    <span>WASD / Arrows</span> — Move & Attack<br>
+    <span>1-5</span> — Use Item &nbsp; <span>Space</span> — Wait<br>
+    <span>G</span> — Pick Up &nbsp; <span>&gt;</span> — Descend Stairs
+  </div>
+</div>
+
+<div id="death-screen">
+  <div class="death-title">YOU HAVE FALLEN</div>
+  <div class="death-stats" id="death-stats"></div>
+  <div class="title-prompt" id="death-prompt-text">Press ENTER to try again</div>
+</div>
+
+<div id="win-screen">
+  <div class="win-title">VICTORY</div>
+  <div class="death-stats" id="win-stats"></div>
+  <div class="title-prompt" id="win-prompt-text">Press ENTER to play again</div>
+</div>
+
+<div id="touch-controls">
+  <div id="dpad">
+    <div class="dpad-btn dpad-up" data-dir="up">▲</div>
+    <div class="dpad-btn dpad-left" data-dir="left">◀</div>
+    <div class="dpad-btn dpad-right" data-dir="right">▶</div>
+    <div class="dpad-btn dpad-down" data-dir="down">▼</div>
+  </div>
+  <div id="action-buttons">
+    <div class="action-row">
+      <div class="action-btn pickup" data-action="pickup">Pick</div>
+      <div class="action-btn stairs" data-action="stairs">▼▼</div>
+      <div class="action-btn" data-action="wait">Wait</div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════
+// OBSIDIAN DEPTHS — A Roguelike Dungeon Crawler
+// ═══════════════════════════════════════════════
+
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const minimapCanvas = document.getElementById('minimap');
+const minimapCtx = minimapCanvas.getContext('2d');
+
+// ─── CONFIG ─────────────────────────────────────
+const CFG = {
+  MAP_W: 64,
+  MAP_H: 44,
+  TILE: 28,
+  MAX_FLOOR: 10,
+  FOV_RADIUS: 9,
+  ROOM_MIN: 5,
+  ROOM_MAX: 12,
+  ROOM_MIN_H: 4,
+  ROOM_MAX_H: 9,
+  INV_SIZE: 5,
+  MSG_MAX: 5,
+};
+
+const TILE = { WALL: 0, FLOOR: 1, STAIRS: 2, CORRIDOR: 3 };
+
+const COLORS = {
+  bg: '#05050a',
+  wallBase: [30, 30, 48],
+  floorBase: [18, 18, 28],
+  corridorBase: [15, 15, 24],
+  stairsGlow: '#fbbf24',
+  playerColor: '#22d3ee',
+  playerGlow: 'rgba(34, 211, 238, 0.35)',
+  torchColor: [255, 160, 50],
+  fogUnexplored: 'rgba(5, 5, 10, 1)',
+  fogExplored: 'rgba(5, 5, 10, 0.7)',
+};
+
+const ENEMY_DEFS = [
+  { name: 'Rat',         ch: 'r', color: '#a1a1aa', hp: 6,  atk: 2, def: 0, xp: 5,  minFloor: 1 },
+  { name: 'Bat',         ch: 'b', color: '#818cf8', hp: 4,  atk: 3, def: 0, xp: 6,  minFloor: 1 },
+  { name: 'Skeleton',    ch: 's', color: '#e5e5e5', hp: 10, atk: 3, def: 1, xp: 10, minFloor: 1 },
+  { name: 'Goblin',      ch: 'g', color: '#4ade80', hp: 12, atk: 4, def: 1, xp: 14, minFloor: 2 },
+  { name: 'Orc',         ch: 'o', color: '#a3e635', hp: 18, atk: 5, def: 2, xp: 20, minFloor: 3 },
+  { name: 'Dark Knight', ch: 'K', color: '#94a3b8', hp: 25, atk: 6, def: 3, xp: 30, minFloor: 4 },
+  { name: 'Wraith',      ch: 'W', color: '#c084fc', hp: 20, atk: 7, def: 1, xp: 35, minFloor: 5 },
+  { name: 'Demon',       ch: 'D', color: '#f87171', hp: 35, atk: 8, def: 3, xp: 50, minFloor: 6 },
+  { name: 'Lich',        ch: 'L', color: '#a78bfa', hp: 45, atk: 9, def: 4, xp: 70, minFloor: 8 },
+  { name: 'Dragon',      ch: 'Ω', color: '#ef4444', hp: 60, atk: 11,def: 5, xp: 100,minFloor: 9 },
+];
+
+const ITEM_DEFS = [
+  { name: 'Health Potion',   ch: '!', color: '#f87171', type: 'potion',  effect: 'heal',    value: 12 },
+  { name: 'Greater Potion',  ch: '!', color: '#fb923c', type: 'potion',  effect: 'heal',    value: 25 },
+  { name: 'Strength Elixir', ch: '!', color: '#ef4444', type: 'potion',  effect: 'str',     value: 2  },
+  { name: 'Iron Shield',     ch: ']', color: '#60a5fa', type: 'equip',   effect: 'def',     value: 2  },
+  { name: 'Steel Sword',     ch: ')', color: '#f5f5f5', type: 'equip',   effect: 'atk',     value: 2  },
+  { name: 'Fire Scroll',     ch: '?', color: '#f97316', type: 'scroll',  effect: 'fireball',value: 15 },
+  { name: 'Blink Scroll',    ch: '?', color: '#38bdf8', type: 'scroll',  effect: 'blink',   value: 0  },
+];
+
+// ─── UTILS ──────────────────────────────────────
+function rand(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+function randFloat(min, max) { return Math.random() * (max - min) + min; }
+function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+function lerp(a, b, t) { return a + (b - a) * t; }
+function dist(x1, y1, x2, y2) { return Math.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2); }
+function key(x, y) { return `${x},${y}`; }
+
+function tileHash(x, y, seed) {
+  let h = (x * 374761393 + y * 668265263 + seed * 1013904223) | 0;
+  h = ((h >> 16) ^ h) * 0x45d9f3b | 0;
+  h = ((h >> 16) ^ h) * 0x45d9f3b | 0;
+  return ((h >> 16) ^ h) & 0x7fffffff;
+}
+
+function colorVariant(base, x, y, seed, range) {
+  const h = tileHash(x, y, seed);
+  const v = (h % (range * 2 + 1)) - range;
+  return [clamp(base[0] + v, 0, 255), clamp(base[1] + v, 0, 255), clamp(base[2] + v, 0, 255)];
+}
+
+// ─── GAME STATE ─────────────────────────────────
+let state = null;
+let gamePhase = 'title'; // title, playing, dead, won
+
+function newState() {
+  return {
+    map: [],
+    explored: [],
+    visible: new Set(),
+    rooms: [],
+    player: { x: 0, y: 0, hp: 25, maxHp: 25, atk: 4, def: 1, level: 1, xp: 0, xpNext: 15 },
+    enemies: [],
+    items: [],       // items on ground
+    inventory: [],    // player inventory
+    groundItems: [],  // items on the floor of current level
+    floor: 1,
+    turns: 0,
+    kills: 0,
+    stairsPos: { x: 0, y: 0 },
+    torches: [],
+    messages: [],
+    animations: [],
+    particles: [],
+    floatingTexts: [],
+    camera: { x: 0, y: 0 },
+    screenShake: 0,
+    seed: Math.floor(Math.random() * 999999),
+  };
+}
+
+function addMessage(text, type = 'info') {
+  state.messages.unshift({ text, type, age: 0 });
+  if (state.messages.length > CFG.MSG_MAX) state.messages.pop();
+}
+
+// ─── DUNGEON GENERATION ─────────────────────────
+function generateDungeon(floor) {
+  const w = CFG.MAP_W, h = CFG.MAP_H;
+  const map = Array.from({ length: h }, () => new Uint8Array(w));
+  const explored = Array.from({ length: h }, () => new Uint8Array(w));
+  const rooms = [];
+  const numRooms = rand(8, 14) + Math.floor(floor / 2);
+  const torches = [];
+
+  for (let attempt = 0; attempt < numRooms * 5; attempt++) {
+    if (rooms.length >= numRooms) break;
+    const rw = rand(CFG.ROOM_MIN, CFG.ROOM_MAX);
+    const rh = rand(CFG.ROOM_MIN_H, CFG.ROOM_MAX_H);
+    const rx = rand(2, w - rw - 2);
+    const ry = rand(2, h - rh - 2);
+
+    let overlap = false;
+    for (const r of rooms) {
+      if (rx < r.x + r.w + 1 && rx + rw + 1 > r.x && ry < r.y + r.h + 1 && ry + rh + 1 > r.y) {
+        overlap = true; break;
+      }
+    }
+    if (overlap) continue;
+
+    for (let dy = 0; dy < rh; dy++)
+      for (let dx = 0; dx < rw; dx++)
+        map[ry + dy][rx + dx] = TILE.FLOOR;
+
+    rooms.push({ x: rx, y: ry, w: rw, h: rh, cx: Math.floor(rx + rw / 2), cy: Math.floor(ry + rh / 2) });
+  }
+
+  for (let i = 1; i < rooms.length; i++) {
+    const a = rooms[i - 1], b = rooms[i];
+    digCorridor(map, a.cx, a.cy, b.cx, b.cy);
+  }
+
+  if (rooms.length > 3) {
+    const extra = rand(1, 3);
+    for (let i = 0; i < extra; i++) {
+      const a = rooms[rand(0, rooms.length - 1)];
+      const b = rooms[rand(0, rooms.length - 1)];
+      if (a !== b) digCorridor(map, a.cx, a.cy, b.cx, b.cy);
+    }
+  }
+
+  for (const room of rooms) {
+    const numTorches = rand(0, 2);
+    for (let t = 0; t < numTorches; t++) {
+      const tx = rand(room.x, room.x + room.w - 1);
+      const ty = rand(room.y, room.y + room.h - 1);
+      let isWall = false;
+      for (let dy = -1; dy <= 1; dy++)
+        for (let dx = -1; dx <= 1; dx++)
+          if (map[ty + dy] && map[ty + dy][tx + dx] === TILE.WALL) isWall = true;
+      if (isWall && map[ty][tx] === TILE.FLOOR) {
+        torches.push({ x: tx, y: ty, phase: Math.random() * Math.PI * 2 });
+      }
+    }
+  }
+
+  const playerRoom = rooms[0];
+  const stairsRoom = rooms[rooms.length - 1];
+  const stairsPos = { x: stairsRoom.cx, y: stairsRoom.cy };
+  map[stairsPos.y][stairsPos.x] = TILE.STAIRS;
+
+  return { map, explored, rooms, playerStart: { x: playerRoom.cx, y: playerRoom.cy }, stairsPos, torches };
+}
+
+function digCorridor(map, x1, y1, x2, y2) {
+  let x = x1, y = y1;
+  const horizFirst = Math.random() > 0.5;
+
+  if (horizFirst) {
+    while (x !== x2) { if (map[y][x] === TILE.WALL) map[y][x] = TILE.CORRIDOR; x += x < x2 ? 1 : -1; }
+    if (map[y][x] === TILE.WALL) map[y][x] = TILE.CORRIDOR;
+    while (y !== y2) { if (map[y][x] === TILE.WALL) map[y][x] = TILE.CORRIDOR; y += y < y2 ? 1 : -1; }
+    if (map[y][x] === TILE.WALL) map[y][x] = TILE.CORRIDOR;
+  } else {
+    while (y !== y2) { if (map[y][x] === TILE.WALL) map[y][x] = TILE.CORRIDOR; y += y < y2 ? 1 : -1; }
+    if (map[y][x] === TILE.WALL) map[y][x] = TILE.CORRIDOR;
+    while (x !== x2) { if (map[y][x] === TILE.WALL) map[y][x] = TILE.CORRIDOR; x += x < x2 ? 1 : -1; }
+    if (map[y][x] === TILE.WALL) map[y][x] = TILE.CORRIDOR;
+  }
+}
+
+function populateFloor(floor) {
+  const enemies = [];
+  const items = [];
+  const available = ENEMY_DEFS.filter(e => e.minFloor <= floor);
+
+  for (let i = 1; i < state.rooms.length; i++) {
+    const room = state.rooms[i];
+    const numEnemies = rand(1, Math.min(3, 1 + Math.floor(floor / 2)));
+    for (let j = 0; j < numEnemies; j++) {
+      const def = available[rand(0, available.length - 1)];
+      const ex = rand(room.x + 1, room.x + room.w - 2);
+      const ey = rand(room.y + 1, room.y + room.h - 2);
+      if (enemies.some(e => e.x === ex && e.y === ey)) continue;
+      const scale = 1 + (floor - 1) * 0.15;
+      enemies.push({
+        ...def,
+        x: ex, y: ey,
+        hp: Math.floor(def.hp * scale),
+        maxHp: Math.floor(def.hp * scale),
+        atk: Math.floor(def.atk * scale),
+        def: Math.floor(def.def * scale),
+        awake: false,
+      });
+    }
+
+    if (Math.random() < 0.5 + floor * 0.03) {
+      const avItems = floor < 4 ? ITEM_DEFS.slice(0, 5) : ITEM_DEFS;
+      const itemDef = avItems[rand(0, avItems.length - 1)];
+      const ix = rand(room.x + 1, room.x + room.w - 2);
+      const iy = rand(room.y + 1, room.y + room.h - 2);
+      items.push({ ...itemDef, x: ix, y: iy });
+    }
+  }
+
+  return { enemies, items };
+}
+
+// ─── FOV (RECURSIVE SHADOWCASTING) ──────────────
+const OCTANT_MULT = [
+  [1, 0, 0, -1, -1, 0, 0, 1],
+  [0, 1, -1, 0, 0, -1, 1, 0],
+  [0, 1, 1, 0, 0, -1, -1, 0],
+  [1, 0, 0, 1, -1, 0, 0, -1],
+];
+
+function computeFOV(cx, cy, radius) {
+  const visible = new Set();
+  visible.add(key(cx, cy));
+
+  for (let oct = 0; oct < 8; oct++) {
+    castLight(cx, cy, radius, 1, 1.0, 0.0,
+      OCTANT_MULT[0][oct], OCTANT_MULT[1][oct],
+      OCTANT_MULT[2][oct], OCTANT_MULT[3][oct], visible);
+  }
+  return visible;
+}
+
+function castLight(cx, cy, radius, row, startSlope, endSlope, xx, xy, yx, yy, visible) {
+  if (startSlope < endSlope) return;
+
+  let nextStart = startSlope;
+
+  for (let j = row; j <= radius; j++) {
+    let blocked = false;
+
+    for (let dx = -j; dx <= 0; dx++) {
+      const dy = -j;
+      const mapX = cx + dx * xx + dy * xy;
+      const mapY = cy + dx * yx + dy * yy;
+
+      const lSlope = (dx - 0.5) / (dy + 0.5);
+      const rSlope = (dx + 0.5) / (dy - 0.5);
+
+      if (startSlope < rSlope) continue;
+      if (endSlope > lSlope) break;
+
+      const d = Math.sqrt(dx * dx + dy * dy);
+      if (d <= radius && mapX >= 0 && mapX < CFG.MAP_W && mapY >= 0 && mapY < CFG.MAP_H) {
+        visible.add(key(mapX, mapY));
+      }
+
+      if (blocked) {
+        if (isOpaque(mapX, mapY)) {
+          nextStart = rSlope;
+          continue;
+        } else {
+          blocked = false;
+          startSlope = nextStart;
+        }
+      } else if (isOpaque(mapX, mapY) && j < radius) {
+        blocked = true;
+        castLight(cx, cy, radius, j + 1, startSlope, lSlope, xx, xy, yx, yy, visible);
+        nextStart = rSlope;
+      }
+    }
+
+    if (blocked) break;
+  }
+}
+
+function isOpaque(x, y) {
+  if (x < 0 || x >= CFG.MAP_W || y < 0 || y >= CFG.MAP_H) return true;
+  return state.map[y][x] === TILE.WALL;
+}
+
+// ─── PARTICLES ──────────────────────────────────
+function spawnParticles(x, y, count, color, speed, life) {
+  for (let i = 0; i < count; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const spd = randFloat(speed * 0.3, speed);
+    state.particles.push({
+      x: x * CFG.TILE + CFG.TILE / 2,
+      y: y * CFG.TILE + CFG.TILE / 2,
+      vx: Math.cos(angle) * spd,
+      vy: Math.sin(angle) * spd,
+      life, maxLife: life,
+      color,
+      size: randFloat(1.5, 4),
+    });
+  }
+}
+
+function spawnFloatingText(x, y, text, color) {
+  state.floatingTexts.push({
+    x: x * CFG.TILE + CFG.TILE / 2,
+    y: y * CFG.TILE,
+    text, color,
+    life: 60, maxLife: 60,
+    vy: -1.2,
+  });
+}
+
+// ─── ANIMATIONS ─────────────────────────────────
+function addMoveAnim(entity, fromX, fromY) {
+  state.animations.push({
+    entity, fromX, fromY, toX: entity.x, toY: entity.y,
+    progress: 0, duration: 8,
+  });
+}
+
+// ─── GAME LOGIC ─────────────────────────────────
+function initGame() {
+  state = newState();
+  enterFloor(1);
+  addMessage('You descend into the Obsidian Depths...', 'descend');
+}
+
+function enterFloor(floor) {
+  state.floor = floor;
+  const dungeon = generateDungeon(floor);
+  state.map = dungeon.map;
+  state.explored = dungeon.explored;
+  state.rooms = dungeon.rooms;
+  state.stairsPos = dungeon.stairsPos;
+  state.torches = dungeon.torches;
+  state.player.x = dungeon.playerStart.x;
+  state.player.y = dungeon.playerStart.y;
+  state.camera.x = state.player.x;
+  state.camera.y = state.player.y;
+
+  const pop = populateFloor(floor);
+  state.enemies = pop.enemies;
+  state.groundItems = pop.items;
+  state.visible = computeFOV(state.player.x, state.player.y, CFG.FOV_RADIUS);
+  markExplored();
+}
+
+function markExplored() {
+  for (const k of state.visible) {
+    const [x, y] = k.split(',').map(Number);
+    if (y >= 0 && y < CFG.MAP_H && x >= 0 && x < CFG.MAP_W) {
+      state.explored[y][x] = 1;
+    }
+  }
+}
+
+function tryMove(dx, dy) {
+  if (gamePhase !== 'playing') return;
+
+  const nx = state.player.x + dx;
+  const ny = state.player.y + dy;
+
+  if (nx < 0 || nx >= CFG.MAP_W || ny < 0 || ny >= CFG.MAP_H) return;
+  if (state.map[ny][nx] === TILE.WALL) return;
+
+  const enemy = state.enemies.find(e => e.x === nx && e.y === ny && e.hp > 0);
+  if (enemy) {
+    attackEnemy(enemy);
+    endTurn();
+    return;
+  }
+
+  const oldX = state.player.x, oldY = state.player.y;
+  state.player.x = nx;
+  state.player.y = ny;
+  addMoveAnim(state.player, oldX, oldY);
+
+  endTurn();
+}
+
+function attackEnemy(enemy) {
+  const dmg = Math.max(1, state.player.atk - enemy.def + rand(-1, 1));
+  enemy.hp -= dmg;
+  spawnParticles(enemy.x, enemy.y, 8, '#f87171', 2.5, 20);
+  spawnFloatingText(enemy.x, enemy.y, `-${dmg}`, '#f87171');
+  state.screenShake = 4;
+
+  if (enemy.hp <= 0) {
+    addMessage(`You slay the ${enemy.name}! (+${enemy.xp} XP)`, 'combat');
+    state.kills++;
+    spawnParticles(enemy.x, enemy.y, 20, enemy.color, 3, 35);
+    gainXP(enemy.xp);
+  } else {
+    addMessage(`You hit the ${enemy.name} for ${dmg} damage.`, 'combat');
+  }
+}
+
+function enemyAttack(enemy) {
+  const dmg = Math.max(1, enemy.atk - state.player.def + rand(-1, 1));
+  state.player.hp -= dmg;
+  spawnParticles(state.player.x, state.player.y, 6, '#ef4444', 2, 18);
+  spawnFloatingText(state.player.x, state.player.y, `-${dmg}`, '#ef4444');
+  state.screenShake = 3;
+  addMessage(`The ${enemy.name} hits you for ${dmg} damage!`, 'combat');
+
+  if (state.player.hp <= 0) {
+    state.player.hp = 0;
+    gamePhase = 'dead';
+    showDeathScreen();
+  }
+}
+
+function gainXP(amount) {
+  state.player.xp += amount;
+  while (state.player.xp >= state.player.xpNext) {
+    state.player.xp -= state.player.xpNext;
+    state.player.level++;
+    state.player.maxHp += 6;
+    state.player.hp = Math.min(state.player.hp + 6, state.player.maxHp);
+    state.player.atk += 1;
+    state.player.def += 1;
+    state.player.xpNext = Math.floor(state.player.xpNext * 1.5);
+    addMessage(`Level up! You are now level ${state.player.level}!`, 'level');
+    spawnParticles(state.player.x, state.player.y, 25, '#c084fc', 3, 30);
+  }
+}
+
+function pickupItem() {
+  const idx = state.groundItems.findIndex(i => i.x === state.player.x && i.y === state.player.y);
+  if (idx === -1) { addMessage('Nothing to pick up here.', 'info'); return; }
+  if (state.inventory.length >= CFG.INV_SIZE) { addMessage('Inventory full!', 'info'); return; }
+
+  const item = state.groundItems.splice(idx, 1)[0];
+  state.inventory.push(item);
+  addMessage(`Picked up ${item.name}.`, 'pickup');
+  spawnParticles(state.player.x, state.player.y, 10, item.color, 2, 20);
+}
+
+function useItem(slot) {
+  if (slot >= state.inventory.length) return;
+  const item = state.inventory[slot];
+
+  if (item.effect === 'heal') {
+    const healed = Math.min(item.value, state.player.maxHp - state.player.hp);
+    state.player.hp += healed;
+    addMessage(`Used ${item.name}. Healed ${healed} HP.`, 'pickup');
+    spawnParticles(state.player.x, state.player.y, 12, '#34d399', 2, 25);
+  } else if (item.effect === 'str') {
+    state.player.atk += item.value;
+    addMessage(`Used ${item.name}. Attack +${item.value}!`, 'level');
+    spawnParticles(state.player.x, state.player.y, 15, '#ef4444', 2, 25);
+  } else if (item.effect === 'def') {
+    state.player.def += item.value;
+    addMessage(`Equipped ${item.name}. Defense +${item.value}!`, 'level');
+  } else if (item.effect === 'atk') {
+    state.player.atk += item.value;
+    addMessage(`Equipped ${item.name}. Attack +${item.value}!`, 'level');
+  } else if (item.effect === 'fireball') {
+    addMessage(`The scroll erupts in flames!`, 'combat');
+    state.enemies.forEach(e => {
+      if (e.hp > 0 && state.visible.has(key(e.x, e.y))) {
+        const d = dist(state.player.x, state.player.y, e.x, e.y);
+        if (d <= 5) {
+          const dmg = Math.max(1, item.value - Math.floor(d));
+          e.hp -= dmg;
+          spawnParticles(e.x, e.y, 12, '#f97316', 3, 25);
+          spawnFloatingText(e.x, e.y, `-${dmg}`, '#f97316');
+          if (e.hp <= 0) {
+            state.kills++;
+            gainXP(e.xp);
+            addMessage(`The ${e.name} burns to ash!`, 'combat');
+          }
+        }
+      }
+    });
+    state.screenShake = 6;
+  } else if (item.effect === 'blink') {
+    const room = state.rooms[rand(0, state.rooms.length - 1)];
+    const ox = state.player.x, oy = state.player.y;
+    state.player.x = rand(room.x + 1, room.x + room.w - 2);
+    state.player.y = rand(room.y + 1, room.y + room.h - 2);
+    spawnParticles(ox, oy, 15, '#38bdf8', 3, 20);
+    spawnParticles(state.player.x, state.player.y, 15, '#38bdf8', 3, 20);
+    addMessage('You blink to a new location!', 'info');
+  }
+
+  state.inventory.splice(slot, 1);
+  endTurn();
+}
+
+function descendStairs() {
+  if (state.player.x !== state.stairsPos.x || state.player.y !== state.stairsPos.y) {
+    addMessage('No stairs here.', 'info');
+    return;
+  }
+
+  if (state.floor >= CFG.MAX_FLOOR) {
+    gamePhase = 'won';
+    showWinScreen();
+    return;
+  }
+
+  state.floor++;
+  enterFloor(state.floor);
+  addMessage(`You descend to floor ${state.floor}...`, 'descend');
+}
+
+function endTurn() {
+  state.turns++;
+  state.visible = computeFOV(state.player.x, state.player.y, CFG.FOV_RADIUS);
+  markExplored();
+
+  const alive = state.enemies.filter(e => e.hp > 0);
+  for (const e of alive) {
+    if (state.visible.has(key(e.x, e.y))) e.awake = true;
+    if (!e.awake) continue;
+
+    const d = dist(e.x, e.y, state.player.x, state.player.y);
+    if (d <= 1.5) {
+      enemyAttack(e);
+    } else if (d < 10) {
+      const path = stepToward(e.x, e.y, state.player.x, state.player.y, alive);
+      if (path) {
+        const ox = e.x, oy = e.y;
+        e.x = path.x;
+        e.y = path.y;
+        addMoveAnim(e, ox, oy);
+      }
+    }
+  }
+
+  state.enemies = state.enemies.filter(e => e.hp > 0);
+}
+
+function stepToward(ex, ey, px, py, allEnemies) {
+  let bestDx = 0, bestDy = 0, bestDist = 999;
+  for (let dx = -1; dx <= 1; dx++) {
+    for (let dy = -1; dy <= 1; dy++) {
+      if (dx === 0 && dy === 0) continue;
+      if (Math.abs(dx) + Math.abs(dy) > 1) continue;
+      const nx = ex + dx, ny = ey + dy;
+      if (nx < 0 || nx >= CFG.MAP_W || ny < 0 || ny >= CFG.MAP_H) continue;
+      if (state.map[ny][nx] === TILE.WALL) continue;
+      if (nx === px && ny === py) continue;
+      if (allEnemies.some(e => e.x === nx && e.y === ny && !(e.x === ex && e.y === ey))) continue;
+      const d = dist(nx, ny, px, py);
+      if (d < bestDist) { bestDist = d; bestDx = dx; bestDy = dy; }
+    }
+  }
+  if (bestDx === 0 && bestDy === 0) return null;
+  return { x: ex + bestDx, y: ey + bestDy };
+}
+
+// ─── RENDERING ──────────────────────────────────
+function resize() {
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = window.innerWidth * dpr;
+  canvas.height = window.innerHeight * dpr;
+  canvas.style.width = window.innerWidth + 'px';
+  canvas.style.height = window.innerHeight + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+
+function render(time) {
+  requestAnimationFrame(render);
+  if (gamePhase === 'title') { renderTitleBG(time); return; }
+  if (gamePhase !== 'playing' && gamePhase !== 'dead' && gamePhase !== 'won') return;
+
+  const T = CFG.TILE;
+  const cw = window.innerWidth, ch = window.innerHeight;
+
+  state.camera.x = lerp(state.camera.x, state.player.x, 0.12);
+  state.camera.y = lerp(state.camera.y, state.player.y, 0.12);
+
+  let shakeX = 0, shakeY = 0;
+  if (state.screenShake > 0) {
+    shakeX = rand(-state.screenShake, state.screenShake);
+    shakeY = rand(-state.screenShake, state.screenShake);
+    state.screenShake *= 0.85;
+    if (state.screenShake < 0.5) state.screenShake = 0;
+  }
+
+  const offsetX = cw / 2 - state.camera.x * T - T / 2 + shakeX;
+  const offsetY = ch / 2 - state.camera.y * T - T / 2 + shakeY;
+
+  ctx.fillStyle = COLORS.bg;
+  ctx.fillRect(0, 0, cw, ch);
+
+  const startTX = Math.max(0, Math.floor(-offsetX / T) - 1);
+  const startTY = Math.max(0, Math.floor(-offsetY / T) - 1);
+  const endTX = Math.min(CFG.MAP_W, startTX + Math.ceil(cw / T) + 3);
+  const endTY = Math.min(CFG.MAP_H, startTY + Math.ceil(ch / T) + 3);
+
+  // --- Terrain ---
+  for (let ty = startTY; ty < endTY; ty++) {
+    for (let tx = startTX; tx < endTX; tx++) {
+      const sx = tx * T + offsetX;
+      const sy = ty * T + offsetY;
+      const tile = state.map[ty][tx];
+      const isVisible = state.visible.has(key(tx, ty));
+      const isExplored = state.explored[ty][tx];
+
+      if (!isExplored) continue;
+
+      let baseColor;
+      if (tile === TILE.WALL) {
+        baseColor = colorVariant(COLORS.wallBase, tx, ty, state.seed, 6);
+      } else if (tile === TILE.STAIRS) {
+        baseColor = [50, 40, 20];
+      } else if (tile === TILE.CORRIDOR) {
+        baseColor = colorVariant(COLORS.corridorBase, tx, ty, state.seed, 4);
+      } else {
+        baseColor = colorVariant(COLORS.floorBase, tx, ty, state.seed, 5);
+      }
+
+      let lightMult = 0;
+      if (isVisible) {
+        const pd = dist(tx, ty, state.player.x, state.player.y);
+        lightMult = Math.max(0, 1 - (pd / (CFG.FOV_RADIUS + 1)) ** 1.5) * 0.6;
+
+        for (const torch of state.torches) {
+          const td = dist(tx, ty, torch.x, torch.y);
+          if (td < 6) {
+            const flicker = 0.85 + Math.sin(time * 0.005 + torch.phase) * 0.15;
+            const tLight = Math.max(0, 1 - (td / 6) ** 1.3) * 0.7 * flicker;
+            lightMult = Math.min(1, lightMult + tLight);
+          }
+        }
+
+        lightMult = clamp(lightMult, 0.15, 1);
+      } else {
+        lightMult = 0.12;
+      }
+
+      const r = Math.floor(baseColor[0] * lightMult);
+      const g = Math.floor(baseColor[1] * lightMult);
+      const b = Math.floor(baseColor[2] * lightMult);
+      ctx.fillStyle = `rgb(${r},${g},${b})`;
+      ctx.fillRect(sx, sy, T, T);
+
+      if (tile === TILE.WALL && isVisible) {
+        ctx.fillStyle = `rgba(255,255,255,0.02)`;
+        ctx.fillRect(sx, sy, T, 1);
+        ctx.fillStyle = `rgba(0,0,0,0.15)`;
+        ctx.fillRect(sx, sy + T - 1, T, 1);
+      }
+
+      if (tile === TILE.FLOOR || tile === TILE.CORRIDOR) {
+        const hash = tileHash(tx, ty, state.seed + 7);
+        if (hash % 12 === 0) {
+          ctx.fillStyle = `rgba(255,255,255,${0.02 * lightMult})`;
+          const dotX = sx + (hash % 7) * 3 + 4;
+          const dotY = sy + ((hash >> 3) % 7) * 3 + 4;
+          ctx.fillRect(dotX, dotY, 1, 1);
+        }
+      }
+
+      if (tile === TILE.STAIRS && isVisible) {
+        ctx.save();
+        ctx.shadowColor = COLORS.stairsGlow;
+        ctx.shadowBlur = 12;
+        ctx.fillStyle = COLORS.stairsGlow;
+        ctx.font = `bold ${T - 6}px 'JetBrains Mono', monospace`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('>', sx + T / 2, sy + T / 2 + 1);
+        ctx.restore();
+      }
+    }
+  }
+
+  // --- Torch glow ---
+  for (const torch of state.torches) {
+    if (!state.visible.has(key(torch.x, torch.y))) continue;
+    const sx = torch.x * T + offsetX + T / 2;
+    const sy = torch.y * T + offsetY + T / 2;
+    const flicker = 0.7 + Math.sin(time * 0.006 + torch.phase) * 0.3;
+    const grad = ctx.createRadialGradient(sx, sy, 0, sx, sy, T * 4);
+    grad.addColorStop(0, `rgba(255, 150, 40, ${0.12 * flicker})`);
+    grad.addColorStop(1, 'rgba(255, 150, 40, 0)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(sx - T * 4, sy - T * 4, T * 8, T * 8);
+
+    ctx.fillStyle = `rgba(255, 200, 80, ${0.8 * flicker})`;
+    ctx.font = `bold ${T - 4}px 'JetBrains Mono', monospace`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('†', sx, sy + 1);
+
+    if (Math.random() < 0.08 * flicker) {
+      state.particles.push({
+        x: sx + rand(-3, 3), y: sy - 4,
+        vx: randFloat(-0.3, 0.3), vy: randFloat(-1.5, -0.5),
+        life: rand(12, 25), maxLife: 25,
+        color: `hsl(${rand(20, 40)}, 100%, ${rand(60, 90)}%)`,
+        size: randFloat(1, 2.5),
+      });
+    }
+  }
+
+  // --- Ground items ---
+  for (const item of state.groundItems) {
+    if (!state.visible.has(key(item.x, item.y))) continue;
+    const sx = item.x * T + offsetX + T / 2;
+    const sy = item.y * T + offsetY + T / 2;
+
+    ctx.save();
+    ctx.shadowColor = item.color;
+    ctx.shadowBlur = 8;
+    ctx.fillStyle = item.color;
+    ctx.font = `bold ${T - 6}px 'JetBrains Mono', monospace`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(item.ch, sx, sy + 1);
+    ctx.restore();
+  }
+
+  // --- Enemies ---
+  for (const e of state.enemies) {
+    if (e.hp <= 0) continue;
+    if (!state.visible.has(key(e.x, e.y))) continue;
+
+    let ex = e.x, ey = e.y;
+    const anim = state.animations.find(a => a.entity === e);
+    if (anim) {
+      const t = anim.progress / anim.duration;
+      ex = lerp(anim.fromX, anim.toX, t);
+      ey = lerp(anim.fromY, anim.toY, t);
+    }
+
+    const sx = ex * T + offsetX + T / 2;
+    const sy = ey * T + offsetY + T / 2;
+
+    ctx.save();
+    ctx.shadowColor = e.color;
+    ctx.shadowBlur = 6;
+    ctx.fillStyle = e.color;
+    ctx.font = `bold ${T - 4}px 'JetBrains Mono', monospace`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(e.ch, sx, sy + 1);
+    ctx.restore();
+
+    const hpPct = e.hp / e.maxHp;
+    if (hpPct < 1) {
+      const barW = T - 4;
+      const barH = 3;
+      const bx = ex * T + offsetX + 2;
+      const by = ey * T + offsetY - 2;
+      ctx.fillStyle = 'rgba(0,0,0,0.6)';
+      ctx.fillRect(bx, by, barW, barH);
+      ctx.fillStyle = hpPct > 0.5 ? '#22c55e' : hpPct > 0.25 ? '#f59e0b' : '#ef4444';
+      ctx.fillRect(bx, by, barW * hpPct, barH);
+    }
+  }
+
+  // --- Player ---
+  {
+    let px = state.player.x, py = state.player.y;
+    const anim = state.animations.find(a => a.entity === state.player);
+    if (anim) {
+      const t = anim.progress / anim.duration;
+      px = lerp(anim.fromX, anim.toX, t);
+      py = lerp(anim.fromY, anim.toY, t);
+    }
+
+    const sx = px * T + offsetX + T / 2;
+    const sy = py * T + offsetY + T / 2;
+
+    const grad = ctx.createRadialGradient(sx, sy, 0, sx, sy, T * 3);
+    grad.addColorStop(0, 'rgba(34, 211, 238, 0.08)');
+    grad.addColorStop(1, 'rgba(34, 211, 238, 0)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(sx - T * 3, sy - T * 3, T * 6, T * 6);
+
+    ctx.save();
+    ctx.shadowColor = COLORS.playerColor;
+    ctx.shadowBlur = 14;
+    ctx.fillStyle = COLORS.playerColor;
+    ctx.font = `bold ${T}px 'JetBrains Mono', monospace`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('@', sx, sy + 1);
+    ctx.restore();
+  }
+
+  // --- Particles ---
+  for (let i = state.particles.length - 1; i >= 0; i--) {
+    const p = state.particles[i];
+    p.x += p.vx;
+    p.y += p.vy;
+    p.vy += 0.03;
+    p.life--;
+    if (p.life <= 0) { state.particles.splice(i, 1); continue; }
+    const alpha = p.life / p.maxLife;
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = p.color;
+    ctx.shadowColor = p.color;
+    ctx.shadowBlur = 4;
+    const worldX = p.x + offsetX;
+    const worldY = p.y + offsetY;
+    ctx.beginPath();
+    ctx.arc(worldX, worldY, p.size * alpha, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // --- Floating texts ---
+  for (let i = state.floatingTexts.length - 1; i >= 0; i--) {
+    const ft = state.floatingTexts[i];
+    ft.y += ft.vy;
+    ft.life--;
+    if (ft.life <= 0) { state.floatingTexts.splice(i, 1); continue; }
+    const alpha = ft.life / ft.maxLife;
+    const worldX = ft.x + offsetX;
+    const worldY = ft.y + offsetY;
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = ft.color;
+    ctx.shadowColor = ft.color;
+    ctx.shadowBlur = 6;
+    ctx.font = `bold 14px 'JetBrains Mono', monospace`;
+    ctx.textAlign = 'center';
+    ctx.fillText(ft.text, worldX, worldY);
+    ctx.restore();
+  }
+
+  // --- Animations tick ---
+  for (let i = state.animations.length - 1; i >= 0; i--) {
+    state.animations[i].progress++;
+    if (state.animations[i].progress >= state.animations[i].duration) {
+      state.animations.splice(i, 1);
+    }
+  }
+
+  // --- Vignette ---
+  const vigGrad = ctx.createRadialGradient(cw / 2, ch / 2, cw * 0.3, cw / 2, ch / 2, cw * 0.7);
+  vigGrad.addColorStop(0, 'rgba(5,5,10,0)');
+  vigGrad.addColorStop(1, 'rgba(5,5,10,0.6)');
+  ctx.fillStyle = vigGrad;
+  ctx.fillRect(0, 0, cw, ch);
+
+  // --- Update UI ---
+  updateUI();
+  renderMinimap();
+}
+
+function renderTitleBG(time) {
+  const w = window.innerWidth, h = window.innerHeight;
+  ctx.fillStyle = COLORS.bg;
+  ctx.fillRect(0, 0, w, h);
+
+  for (let i = 0; i < 60; i++) {
+    const x = (tileHash(i, 0, 42) % w);
+    const y = (tileHash(0, i, 42) % h);
+    const flicker = 0.3 + Math.sin(time * 0.002 + i * 0.7) * 0.3;
+    ctx.fillStyle = `rgba(245, 158, 11, ${flicker * 0.15})`;
+    ctx.beginPath();
+    ctx.arc(x, y, 1.5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+function updateUI() {
+  const p = state.player;
+  document.getElementById('hp-fill').style.width = `${(p.hp / p.maxHp) * 100}%`;
+  document.getElementById('hp-text').textContent = `${p.hp} / ${p.maxHp}`;
+  document.getElementById('xp-fill').style.width = `${(p.xp / p.xpNext) * 100}%`;
+  document.getElementById('s-level').textContent = p.level;
+  document.getElementById('s-atk').textContent = p.atk;
+  document.getElementById('s-def').textContent = p.def;
+  document.getElementById('s-floor').textContent = state.floor;
+  document.getElementById('s-kills').textContent = state.kills;
+
+  const msgEl = document.getElementById('message-log');
+  msgEl.innerHTML = state.messages.map((m, i) =>
+    `<div class="msg-line msg-${m.type} ${i > 0 ? 'old' : ''}">${m.text}</div>`
+  ).join('');
+
+  const invEl = document.getElementById('inventory-bar');
+  let invHtml = '';
+  for (let i = 0; i < CFG.INV_SIZE; i++) {
+    const item = state.inventory[i];
+    if (item) {
+      invHtml += `<div class="inv-slot has-item" title="${item.name}"><span class="key-hint">${i + 1}</span><span style="color:${item.color}">${item.ch}</span></div>`;
+    } else {
+      invHtml += `<div class="inv-slot"><span class="key-hint">${i + 1}</span></div>`;
+    }
+  }
+  invEl.innerHTML = invHtml;
+}
+
+function renderMinimap() {
+  const mw = 120, mh = 80;
+  const scaleX = mw / CFG.MAP_W;
+  const scaleY = mh / CFG.MAP_H;
+  minimapCtx.fillStyle = 'rgba(8, 8, 16, 0.9)';
+  minimapCtx.fillRect(0, 0, mw, mh);
+
+  for (let y = 0; y < CFG.MAP_H; y++) {
+    for (let x = 0; x < CFG.MAP_W; x++) {
+      if (!state.explored[y][x]) continue;
+      const tile = state.map[y][x];
+      if (tile === TILE.WALL) continue;
+
+      const isVis = state.visible.has(key(x, y));
+      minimapCtx.fillStyle = isVis ? 'rgba(100, 100, 120, 0.7)' : 'rgba(60, 60, 80, 0.4)';
+      minimapCtx.fillRect(x * scaleX, y * scaleY, Math.max(1, scaleX), Math.max(1, scaleY));
+    }
+  }
+
+  state.enemies.forEach(e => {
+    if (!state.visible.has(key(e.x, e.y)) || e.hp <= 0) return;
+    minimapCtx.fillStyle = '#ef4444';
+    minimapCtx.fillRect(e.x * scaleX, e.y * scaleY, 2, 2);
+  });
+
+  minimapCtx.fillStyle = COLORS.stairsGlow;
+  if (state.explored[state.stairsPos.y][state.stairsPos.x]) {
+    minimapCtx.fillRect(state.stairsPos.x * scaleX - 1, state.stairsPos.y * scaleY - 1, 3, 3);
+  }
+
+  minimapCtx.fillStyle = COLORS.playerColor;
+  minimapCtx.fillRect(state.player.x * scaleX - 1, state.player.y * scaleY - 1, 3, 3);
+}
+
+function showDeathScreen() {
+  const ds = document.getElementById('death-screen');
+  ds.classList.add('show');
+  document.getElementById('death-stats').innerHTML = `
+    <div class="death-stat">Reached Floor <span>${state.floor}</span></div>
+    <div class="death-stat">Level <span>${state.player.level}</span></div>
+    <div class="death-stat">Enemies Slain <span>${state.kills}</span></div>
+    <div class="death-stat">Turns Survived <span>${state.turns}</span></div>
+  `;
+}
+
+function showWinScreen() {
+  const ws = document.getElementById('win-screen');
+  ws.classList.add('show');
+  document.getElementById('win-stats').innerHTML = `
+    <div class="death-stat">Conquered All <span>${CFG.MAX_FLOOR}</span> Floors</div>
+    <div class="death-stat">Final Level <span>${state.player.level}</span></div>
+    <div class="death-stat">Total Kills <span>${state.kills}</span></div>
+    <div class="death-stat">Turns Taken <span>${state.turns}</span></div>
+  `;
+}
+
+// ─── INPUT ──────────────────────────────────────
+const KEY_MAP = {
+  ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowLeft: [-1, 0], ArrowRight: [1, 0],
+  w: [0, -1], s: [0, 1], a: [-1, 0], d: [1, 0],
+  W: [0, -1], S: [0, 1], A: [-1, 0], D: [1, 0],
+};
+
+let inputCooldown = 0;
+let keysDown = {};
+
+document.addEventListener('keydown', (e) => {
+  keysDown[e.key] = true;
+
+  if (gamePhase === 'title' && (e.key === 'Enter' || e.key === ' ')) {
+    e.preventDefault();
+    gamePhase = 'playing';
+    document.getElementById('title-screen').classList.add('hidden');
+    initGame();
+    return;
+  }
+
+  if ((gamePhase === 'dead' || gamePhase === 'won') && e.key === 'Enter') {
+    document.getElementById('death-screen').classList.remove('show');
+    document.getElementById('win-screen').classList.remove('show');
+    gamePhase = 'playing';
+    initGame();
+    return;
+  }
+
+  if (gamePhase !== 'playing') return;
+  if (inputCooldown > 0) return;
+
+  if (KEY_MAP[e.key]) {
+    e.preventDefault();
+    const [dx, dy] = KEY_MAP[e.key];
+    tryMove(dx, dy);
+    inputCooldown = 6;
+    return;
+  }
+
+  if (e.key === ' ') { e.preventDefault(); endTurn(); inputCooldown = 6; return; }
+  if (e.key === 'g' || e.key === 'G') { pickupItem(); inputCooldown = 6; return; }
+  if (e.key === '>' || e.key === '.') { descendStairs(); inputCooldown = 6; return; }
+
+  const num = parseInt(e.key);
+  if (num >= 1 && num <= 5) { useItem(num - 1); inputCooldown = 6; return; }
+});
+
+document.addEventListener('keyup', (e) => {
+  keysDown[e.key] = false;
+});
+
+setInterval(() => {
+  if (inputCooldown > 0) inputCooldown--;
+  if (gamePhase !== 'playing') return;
+
+  for (const k of Object.keys(KEY_MAP)) {
+    if (keysDown[k] && inputCooldown <= 0) {
+      const [dx, dy] = KEY_MAP[k];
+      tryMove(dx, dy);
+      inputCooldown = 4;
+      return;
+    }
+  }
+}, 1000 / 30);
+
+// ─── MOBILE / TOUCH ─────────────────────────────
+const isMobile = /Android|iPhone|iPad|iPod|webOS/i.test(navigator.userAgent) || ('ontouchstart' in window && window.innerWidth < 900);
+
+if (isMobile) {
+  document.getElementById('title-prompt-text').textContent = 'Tap to begin';
+  document.getElementById('title-controls-text').innerHTML =
+    '<span>D-Pad</span> — Move & Attack<br><span>Pick</span> — Pick Up &nbsp; <span>▼▼</span> — Stairs<br><span>Tap item slot</span> — Use Item';
+  document.getElementById('death-prompt-text').textContent = 'Tap to try again';
+  document.getElementById('win-prompt-text').textContent = 'Tap to play again';
+}
+
+// D-pad touch
+const DIR_MAP = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
+let touchRepeat = null;
+
+document.querySelectorAll('.dpad-btn').forEach(btn => {
+  const dir = btn.dataset.dir;
+  const fire = () => {
+    if (gamePhase !== 'playing') return;
+    const [dx, dy] = DIR_MAP[dir];
+    tryMove(dx, dy);
+  };
+
+  btn.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    btn.classList.add('pressed');
+    fire();
+    clearInterval(touchRepeat);
+    touchRepeat = setInterval(fire, 150);
+  }, { passive: false });
+
+  btn.addEventListener('touchend', (e) => {
+    e.preventDefault();
+    btn.classList.remove('pressed');
+    clearInterval(touchRepeat);
+    touchRepeat = null;
+  });
+
+  btn.addEventListener('touchcancel', () => {
+    btn.classList.remove('pressed');
+    clearInterval(touchRepeat);
+    touchRepeat = null;
+  });
+});
+
+// Action buttons touch
+document.querySelectorAll('.action-btn').forEach(btn => {
+  btn.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    btn.classList.add('pressed');
+    const action = btn.dataset.action;
+    if (gamePhase !== 'playing') return;
+    if (action === 'pickup') pickupItem();
+    else if (action === 'stairs') descendStairs();
+    else if (action === 'wait') { endTurn(); }
+  }, { passive: false });
+
+  btn.addEventListener('touchend', (e) => {
+    e.preventDefault();
+    btn.classList.remove('pressed');
+  });
+});
+
+// Tappable inventory slots on mobile
+document.getElementById('inventory-bar').addEventListener('touchstart', (e) => {
+  const slot = e.target.closest('.inv-slot');
+  if (!slot || gamePhase !== 'playing') return;
+  e.preventDefault();
+  const idx = Array.from(slot.parentElement.children).indexOf(slot);
+  if (idx >= 0 && idx < state.inventory.length) useItem(idx);
+}, { passive: false });
+
+// Title/death/win screen tap
+function handleScreenTap(e) {
+  if (gamePhase === 'title') {
+    e.preventDefault();
+    gamePhase = 'playing';
+    document.getElementById('title-screen').classList.add('hidden');
+    initGame();
+  } else if (gamePhase === 'dead' || gamePhase === 'won') {
+    e.preventDefault();
+    document.getElementById('death-screen').classList.remove('show');
+    document.getElementById('win-screen').classList.remove('show');
+    gamePhase = 'playing';
+    initGame();
+  }
+}
+document.getElementById('title-screen').addEventListener('touchstart', handleScreenTap, { passive: false });
+document.getElementById('death-screen').addEventListener('touchstart', handleScreenTap, { passive: false });
+document.getElementById('win-screen').addEventListener('touchstart', handleScreenTap, { passive: false });
+
+// Prevent zoom/scroll on game canvas
+document.addEventListener('touchmove', (e) => { if (e.target === canvas) e.preventDefault(); }, { passive: false });
+
+// ─── INIT ───────────────────────────────────────
+window.addEventListener('resize', resize);
+resize();
+requestAnimationFrame(render);
+</script>
+</body>
+</html>

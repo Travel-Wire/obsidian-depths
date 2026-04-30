@@ -87,6 +87,11 @@ const ITEM_DEFS = [
   { id:'fire_scroll',     name:'Fire Scroll',      emoji:'📜', color:'#f97316', type:'scroll',    slot:null,        effect:'fireball', value:15, minFloor:2, weight:4 },
   { id:'blink_scroll',    name:'Blink Scroll',     emoji:'📜', color:'#38bdf8', type:'scroll',    slot:null,        effect:'blink',    value:0,  minFloor:2, weight:3 },
   { id:'key',             name:'Skeleton Key',     emoji:'🗝️', color:'#fbbf24', type:'key',       slot:null,        effect:'unlock',   value:0,  minFloor:3, weight:2 },
+  // v4-05 — HP rework
+  { id:'greater_heal',    name:'Greater Heal',     emoji:'🧫', color:'#fb7185', type:'potion',    slot:null,        effect:'heal',     value:50, minFloor:4, weight:2 },
+  { id:'regen_potion',    name:'Regen Potion',     emoji:'🟢', color:'#4ade80', type:'potion',    slot:null,        effect:'regen',    value:2,  ticks:6, minFloor:3, weight:3 },
+  // v4-04 — Trap skills
+  { id:'disarm_scroll',   name:'Disarm Scroll',    emoji:'📜', color:'#a78bfa', type:'scroll',    slot:null,        effect:'disarm',   value:0,  minFloor:3, weight:3 },
 ];
 
 // ─── LEGENDARY UNIQUES (3 per MVP cut) ───────────

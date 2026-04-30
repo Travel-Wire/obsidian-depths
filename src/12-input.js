@@ -92,6 +92,12 @@ document.addEventListener('keydown', (e) => {
   if (e.key === '>' || e.key === '.') { descendStairs(); return; }
   if (e.key === 'q' || e.key === 'Q') { e.preventDefault(); useActiveSkill(0); return; }
   if (e.key === 'e' || e.key === 'E') { e.preventDefault(); useActiveSkill(1); return; }
+  // v4-04: trap disarm key
+  if (e.key === 'x' || e.key === 'X') {
+    e.preventDefault();
+    if (typeof tryDisarmTrap === 'function') tryDisarmTrap();
+    return;
+  }
   if (e.key === 'r' || e.key === 'R') {
     const onAnvil = state.anvils && state.anvils.find(a => a.x === state.player.x && a.y === state.player.y && !a.used);
     if (onAnvil) {

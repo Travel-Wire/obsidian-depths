@@ -75,3 +75,43 @@ function triggerTrap(trap) {
     showDeathScreen();
   }
 }
+
+// v4-04 — Active disarm (X key): adjacent revealed trap, 80% success base, 5% brick.
+function tryDisarmTrap() {
+  if (gamePhase !== 'playing') return;
+  if (state.choosingCard) return;
+  // Find trap on adjacent or current tile that's revealed and not yet disarmed/triggered
+  const px = state.player.x, py = state.player.y;
+  const candidate = state.traps.find(t =>
+    !t.disarmed && !t.triggered && t.revealed &&
+    Math.abs(t.x - px) <= 1 && Math.abs(t.y - py) <= 1
+  );
+  if (!candidate) {
+    addMessage('No revealed trap nearby.', 'info');
+    return;
+  }
+  // Sense Danger / Lucky bonuses (capped at 95%)
+  let success = 0.80;
+  const luckyStacks = (typeof playerCardStack === 'function') ? playerCardStack('lucky') : 0;
+  success += luckyStacks * 0.03;
+  success = Math.min(0.95, success);
+  const r = Math.random();
+  if (r < 0.05) {
+    // Brick: -2 HP, trap still triggers
+    state.player.hp -= 2;
+    spawnFloatingText(state.player.x, state.player.y, '-2', '#ef4444');
+    addMessage('Disarm slipped! Trap triggered!', 'combat');
+    triggerTrap(candidate);
+  } else if (r < 0.05 + success) {
+    candidate.disarmed = true;
+    candidate.revealed = true;
+    addMessage(`Trap disarmed. (+5💎)`, 'pickup');
+    spawnParticles(candidate.x, candidate.y, 10, '#a78bfa', 2, 20);
+    state.crystals = (state.crystals || 0) + 5;
+    spawnFloatingText(candidate.x, candidate.y, '+5💎', '#67e8f9');
+  } else {
+    addMessage('Disarm failed — try again.', 'info');
+  }
+  state.player.energy -= ACTION_COST.WAIT;
+  processWorld();
+}

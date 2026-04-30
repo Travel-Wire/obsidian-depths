@@ -254,6 +254,25 @@ function useItem(slot) {
   } else if (item.effect === 'unlock') {
     addMessage(`${item.name}: nothing to unlock here.`, 'info');
     consumed = false;
+  } else if (item.effect === 'regen') {
+    // v4-05: Regen Potion — STATUS.REGEN over time
+    addStatusEffect(state.player, STATUS.REGEN, item.ticks || 6, item.value || 2);
+    addMessage(`Regen Potion: +${item.value}HP for ${item.ticks} turns.`, 'pickup');
+    spawnParticles(state.player.x, state.player.y, 8, '#4ade80', 2, 20);
+  } else if (item.effect === 'disarm') {
+    // v4-04: Disarm Scroll — disarm closest revealed adjacent trap
+    const t = state.traps.find(tr => Math.abs(tr.x - state.player.x) <= 1 && Math.abs(tr.y - state.player.y) <= 1
+                                    && !tr.triggered && !tr.disarmed);
+    if (t) {
+      t.disarmed = true; t.revealed = true;
+      addMessage(`Disarm Scroll: ${t.name || 'trap'} neutralized.`, 'pickup');
+      spawnParticles(t.x, t.y, 12, '#a78bfa', 2, 20);
+      state.crystals = (state.crystals || 0) + 5;
+      spawnFloatingText(t.x, t.y, '+5💎', '#67e8f9');
+    } else {
+      addMessage('No trap nearby to disarm.', 'info');
+      consumed = false;
+    }
   } else {
     consumed = false;
   }

@@ -77,6 +77,19 @@ const CARD_DEFS = [
   { id:'fire_aura',    name:'Fire Aura',    emoji:'🔥', tier:'rare', category:'perk', maxStacks:1,
     description:'1 dmg/turn to enemies in r1',
     recompute:(p,_st,_s)=>{ p.flags.fireAura = true; } },
+  // v4-04: Trap-aware perk
+  { id:'sense_danger', name:'Sense Danger', emoji:'👁️‍🗨️', tier:'rare', category:'perk', maxStacks:3,
+    description:'Reveal traps in r3/5/7 around player',
+    recompute:(p,_st,s)=>{ p.flags.senseDangerRadius = (p.flags.senseDangerRadius || 0) + 2 + s; } },
+  // v4-04: Trap immunity active (Q/E)
+  { id:'light_step',   name:'Light Step',   emoji:'👣', tier:'legendary', category:'active', maxStacks:1,
+    description:'Next 5 turns ignore all traps. CD 12.',
+    cooldown:12,
+    recompute:(p,_st,_s)=>{ p.flags.lightStepKnown = true; } },
+  // v4-05: Temp HP shield card
+  { id:'aegis',        name:'Aegis',        emoji:'🛡️', tier:'rare', category:'perk', maxStacks:1,
+    description:'+20 temp HP per kill (max 50 stacked)',
+    recompute:(p,_st,_s)=>{ p.flags.aegis = true; } },
   { id:'ice_aura',     name:'Ice Aura',     emoji:'❄️', tier:'rare', category:'perk', maxStacks:1,
     description:'Adjacent enemies SLOW each turn',
     recompute:(p,_st,_s)=>{ p.flags.iceAura = true; } },

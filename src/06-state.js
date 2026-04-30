@@ -82,6 +82,18 @@ function newState() {
     camera: { x: 0, y: 0 },
     screenShake: 0,
     seed: Math.floor(Math.random() * 999999),
+    // ─── v3-04 / v3-05 — objectives + bosses (declared upfront for safety) ───
+    currentObjective: { id: null, progress: 0, target: 1, complete: false, bossKey: null },
+    objectiveCompleted: false,
+    bonusNoDamageActive: true,
+    objectiveChests: [],
+    hasObjectiveKey: false,
+    bossDefeated: [],
+    bossArenaLocked: false,
+    currentBossId: null,
+    floorEnteredHp: 0,
+    floorEnteredTurn: 0,
+    curseActive: false,
   };
 }
 

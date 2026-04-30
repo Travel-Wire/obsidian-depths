@@ -136,6 +136,12 @@ function autoPickup() {
 }
 
 function pickupItem() {
+  // v3-04: try opening objective chest first (find_key).
+  if (typeof tryOpenObjectiveChest === 'function' && tryOpenObjectiveChest()) {
+    state.player.energy -= ACTION_COST.WAIT;
+    processWorld();
+    return;
+  }
   const idx = state.groundItems.findIndex(i => i.x === state.player.x && i.y === state.player.y);
   if (idx === -1) { addMessage('Nothing to pick up here.', 'info'); return; }
   const item = state.groundItems[idx];
@@ -224,6 +230,15 @@ function descendStairs() {
     return;
   }
 
+  // v3-04: stairs locked until floor objective completed.
+  if (typeof canDescendStairs === 'function' && !canDescendStairs()) {
+    addMessage('The stairs do not open. Complete the floor objective first.', 'info');
+    return;
+  }
+
+  // P1.1 CRITICAL FIX: gamePhase='won' on floor>=MAX_FLOOR descent.
+  // Previously the won state was reachable but win-screen reliability depended on this guard firing
+  // BEFORE state.floor++ tries to call enterFloor(11) which would crash (no FLOOR_OBJECTIVES[11]).
   if (state.floor >= CFG.MAX_FLOOR) {
     gamePhase = 'won';
     showWinScreen();
@@ -325,6 +340,9 @@ function processWorld() {
 
   tickStatusEffects();
   if (gamePhase !== 'playing') return;
+
+  // v3-04: tick floor objectives (race curse drain, completion checks, etc.)
+  if (typeof tickObjectives === 'function') tickObjectives();
 
   state.visible = computePlayerFOV();
   markExplored();

@@ -204,8 +204,11 @@ function pickWeightedEnemy(floor) {
 }
 
 function makeEnemyInstance(def, x, y, floor) {
-  const scale = 1 + (floor - 1) * 0.15;
-  return {
+  // P1.4: per-enemy hpScaleOverride — bosses use 1.0 (use exact def.hp), Dragon uses 0.10 (gentler ramp).
+  // Default scale = 1 + (floor-1)*0.15. Bosses skip the scaling entirely (hpScaleOverride === 1).
+  const scaleRate = (def.hpScaleOverride != null) ? def.hpScaleOverride : 0.15;
+  const scale = def.isBoss ? 1 : (1 + (floor - 1) * scaleRate);
+  const inst = {
     ...def,
     id: ++state.nextEnemyId,
     x, y,
@@ -228,6 +231,20 @@ function makeEnemyInstance(def, x, y, floor) {
     splitGen: def.splitGen || 0,
     isChild: false,
   };
+  // ─── BOSS instance fields (v3-05) ───
+  if (def.isBoss) {
+    inst.isBoss = true;
+    inst.bossKey = def.bossKey;
+    inst.phase = 1;
+    inst.cooldowns = { summon: 0, aoe: 0, teleport: 0, breath: 0, slam: 0, root: 0 };
+    inst.telegraphedTiles = [];
+    inst.minionsAlive = [];
+    inst.lastDamagedTick = 0;
+    inst.enraged = false;
+    inst.introPlayed = false;
+    inst.awake = true; // bosses are always active
+  }
+  return inst;
 }
 
 function findFreeTileInRoom(room, occupied) {
@@ -345,6 +362,25 @@ function enterFloor(floor) {
   const pop = populateFloor(floor);
   state.enemies = pop.enemies;
   state.groundItems = pop.items;
+
+  // ─── BOSS ARENA (v3-05) ───
+  // On boss floors (F2/4/6/8/10), promote largest room to lit arena and spawn the boss.
+  // Note: on F10 the legacy "force dragon" is still in populateFloor; spawnBossArenaForFloor uses the same
+  // dragon enemy def, so we de-dupe by removing legacy dragon spawn before placing the canonical one.
+  if (typeof spawnBossArenaForFloor === 'function') {
+    const fo = (typeof FLOOR_OBJECTIVES !== 'undefined') ? FLOOR_OBJECTIVES[floor] : null;
+    if (fo && fo.main === 'defeat_boss') {
+      // Remove any prior dragon (force-spawn from populateFloor) so we have only one boss entry.
+      state.enemies = state.enemies.filter(e => !(e.key === 'dragon' && !e.isBoss));
+      spawnBossArenaForFloor(floor);
+    }
+  }
+
+  // ─── OBJECTIVES (v3-04) ───
+  if (typeof setupFloorObjective === 'function') {
+    setupFloorObjective(floor);
+  }
+
   state.visible = computePlayerFOV();
   markExplored();
 }

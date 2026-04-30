@@ -584,6 +584,12 @@ const AI_REGISTRY = {
   caster:      aiCaster,
   teleporter:  aiTeleporter,
   dragon:      aiDragon,
+  // ─── BOSS AI (v3-05) — populated from 19-bosses.js, registered here as forward-decl placeholders ───
+  // Real functions live in 19-bosses.js; we wire them at load time via late binding.
+  cryptLord:   function(e){ if (typeof aiCryptLord === 'function') return aiCryptLord(e); aiBasic(e); },
+  golemKing:   function(e){ if (typeof aiGolemKing === 'function') return aiGolemKing(e); aiBasic(e); },
+  demonLord:   function(e){ if (typeof aiDemonLord === 'function') return aiDemonLord(e); aiBasic(e); },
+  treantElder: function(e){ if (typeof aiTreantElder === 'function') return aiTreantElder(e); aiBasic(e); },
 };
 
 function getEffectiveSpeed(entity) {

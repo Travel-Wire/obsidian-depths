@@ -500,4 +500,6 @@ function onEnemyKilled(e) {
   if (state.player.flags && state.player.flags.daggerDance) {
     state.player.flags.daggerDanceCharged = true;
   }
+  // v3-04 / v3-05: objective + boss-kill hook
+  if (typeof objectivesOnEnemyKilled === 'function') objectivesOnEnemyKilled(e);
 }

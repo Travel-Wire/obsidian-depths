@@ -941,6 +941,21 @@
 <!-- All scripts use `defer` so they load in order   -->
 <!-- after DOM parse and execute as one global scope -->
 <!-- ═══════════════════════════════════════════════ -->
+<div id="js-error-banner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:9999;background:#7f1d1d;color:#fee;font:12px/1.4 monospace;padding:8px;white-space:pre-wrap;max-height:50vh;overflow:auto"></div>
+<script>
+window.addEventListener('error', function(e) {
+  var b = document.getElementById('js-error-banner');
+  if (!b) return;
+  b.style.display = 'block';
+  b.textContent += 'ERR: ' + (e.message || 'unknown') + ' @ ' + (e.filename || '?').split('/').pop() + ':' + e.lineno + '\n';
+});
+window.addEventListener('unhandledrejection', function(e) {
+  var b = document.getElementById('js-error-banner');
+  if (!b) return;
+  b.style.display = 'block';
+  b.textContent += 'PROMISE: ' + (e.reason && e.reason.message || e.reason || 'unknown') + '\n';
+});
+</script>
 <script src="src/01-config.js" defer></script>
 <script src="src/02-data-enemies.js" defer></script>
 <script src="src/03-data-items.js" defer></script>

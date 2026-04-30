@@ -386,6 +386,15 @@ function render(time) {
     }
   }
 
+  // --- Boss telegraphs (v3-05) — drawn under enemies so warning glyph shows but enemy on top ---
+  if (typeof renderBossTelegraphs === 'function') {
+    renderBossTelegraphs(ctx, time, offsetX, offsetY, T);
+  }
+  // --- Objective chests (v3-04) ---
+  if (typeof renderObjectiveChests === 'function') {
+    renderObjectiveChests(ctx, time, offsetX, offsetY, T);
+  }
+
   // --- Enemies ---
   for (const e of state.enemies) {
     if (e.hp <= 0) continue;
@@ -539,6 +548,15 @@ function render(time) {
   vigGrad.addColorStop(1, `rgba(5,5,10,${vigAlpha})`);
   ctx.fillStyle = vigGrad;
   ctx.fillRect(0, 0, cw, ch);
+
+  // --- Boss intro banner (v3-05) ---
+  if (typeof renderBossIntroBanner === 'function') {
+    renderBossIntroBanner(ctx, time);
+  }
+  // --- Objective HUD top-center (v3-04) ---
+  if (typeof renderObjectiveHud === 'function') {
+    renderObjectiveHud(ctx, time);
+  }
 
   // --- Update UI ---
   updateUI();

@@ -150,6 +150,8 @@ function enemyAttack(enemy) {
   if (p.dmgReduction > 0) dmg = Math.max(1, Math.ceil(dmg * (1 - p.dmgReduction)));
   state.player.hp -= dmg;
   if (flags.sprinter) p.sprinterTicks = 0;
+  // v3-04: no_damage bonus tracker
+  if (typeof objectivesOnPlayerDamage === 'function') objectivesOnPlayerDamage(dmg);
   spawnParticles(state.player.x, state.player.y, 6, '#ef4444', 2, 18);
   spawnFloatingText(state.player.x, state.player.y, `-${dmg}`, '#ef4444');
   state.screenShake = 3;

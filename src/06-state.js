@@ -91,18 +91,29 @@ function newState() {
     seed: Math.floor(Math.random() * 999999),
 
     // ─── v3-01 visibility / v3-03 minimap / perf flags ───
-    // tileLightLevel — Float32Array(W*H), recomputed each turn from FOV layers (BRIGHT/DIM/EDGE).
-    // Source-of-truth for renderer; state.visible kept as a Set for AI/LOS compat.
     tileLightLevel: null,
-    exploredCorridors: null, // Uint8Array(W*H), persistent per floor
+    exploredCorridors: null,
     exploredRooms: new Set(),
     // Perf P2.4: roomGrid[y*MAP_W+x] = (roomIndex+1) so 0 = "no room". O(1) lookup.
     roomGrid: null,
     // Perf P1.3: render-on-dirty.
     dirty: true,
-    // Minimap dual-mode (v3-03): compact + tap-expand modal.
+    // Minimap dual-mode (v3-03).
     minimapDirty: true,
     minimapExpanded: false,
+
+    // ─── v3-04 / v3-05 — objectives + bosses ───
+    currentObjective: { id: null, progress: 0, target: 1, complete: false, bossKey: null },
+    objectiveCompleted: false,
+    bonusNoDamageActive: true,
+    objectiveChests: [],
+    hasObjectiveKey: false,
+    bossDefeated: [],
+    bossArenaLocked: false,
+    currentBossId: null,
+    floorEnteredHp: 0,
+    floorEnteredTurn: 0,
+    curseActive: false,
   };
 }
 

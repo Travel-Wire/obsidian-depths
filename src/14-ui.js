@@ -3,6 +3,33 @@
 //            active skills, minimap, death/win screens, mobile UI
 // ═══════════════════════════════════════════════
 
+// v3-02 — item tooltip formatter (tier + stats + affixes + unique)
+function formatItemTooltip(it) {
+  if (!it) return '';
+  const parts = [];
+  // Header: [Tier] Name
+  if (typeof it.tier === 'number') {
+    parts.push(`[${TIER_NAMES[it.tier]}] ${it.name}`);
+  } else {
+    parts.push(it.name);
+  }
+  // Stats
+  const stats = [];
+  if (it.atk != null) stats.push(`ATK ${it.atk}`);
+  if (it.def != null) stats.push(`DEF ${it.def}`);
+  if (it.maxHp != null) stats.push(`+${it.maxHp} HP`);
+  if (it.critChance) stats.push(`+${Math.round(it.critChance*100)}% crit`);
+  if (it.maxDur != null) stats.push(`DUR ${it.dur}/${it.maxDur}`);
+  if (stats.length > 0) parts.push(stats.join(' · '));
+  // Affixes
+  if (it.affixes && it.affixes.length > 0) {
+    for (const a of it.affixes) parts.push(`• ${a.displayPrefix}: ${a.desc}`);
+  }
+  // Unique mechanic (Legendary)
+  if (it.unique && it.unique.desc) parts.push(`★ ${it.unique.desc}`);
+  return parts.join('\n');
+}
+
 function updateUI() {
   const p = state.player;
   document.getElementById('hp-fill').style.width = `${(p.hp / p.maxHp) * 100}%`;
@@ -45,8 +72,11 @@ function updateUI() {
           const pct = (it.dur / it.maxDur);
           durBar = `<div class="dur-bar"><div class="dur-fill" style="width:${pct*100}%; background:${durBarColor(pct)}"></div></div>`;
         }
-        const title = `${it.name}${it.maxDur ? ` (${it.dur}/${it.maxDur})` : ''}`;
-        eqHtml += `<div class="equip-slot ${broken ? 'broken':''}" data-eq="${sm.key}" title="${title}"><span class="slot-label">${sm.label}</span><span class="emoji">${it.emoji || '?'}</span>${durBar}</div>`;
+        const title = formatItemTooltip(it);
+        // v3-02 — tier border on equipped slot
+        const tierStyle = (typeof it.tier === 'number' && it.tier > TIER.COMMON)
+          ? `style="border-color:${it.tierColor || TIER_BORDER[it.tier]}; box-shadow:0 0 6px ${it.tierColor || TIER_BORDER[it.tier]}55;"` : '';
+        eqHtml += `<div class="equip-slot ${broken ? 'broken':''}" data-eq="${sm.key}" title="${title}" ${tierStyle}><span class="slot-label">${sm.label}</span><span class="emoji">${it.emoji || '?'}</span>${durBar}</div>`;
       }
     }
     eqEl.innerHTML = eqHtml;
@@ -64,8 +94,11 @@ function updateUI() {
         const pct = (item.dur / item.maxDur);
         durBar = `<div class="dur-bar"><div class="dur-fill" style="width:${pct*100}%; background:${durBarColor(pct)}"></div></div>`;
       }
-      const title = `${item.name}${item.maxDur ? ` (${item.dur}/${item.maxDur})` : ''}`;
-      invHtml += `<div class="inv-slot has-item ${broken ? 'broken':''}" title="${title}"><span class="key-hint">${keyHint}</span><span class="emoji">${item.emoji || item.ch || ''}</span>${durBar}</div>`;
+      const title = formatItemTooltip(item);
+      // v3-02 — tier border on inventory slot
+      const tierStyle = (typeof item.tier === 'number' && item.tier > TIER.COMMON)
+        ? `style="border-color:${item.tierColor || TIER_BORDER[item.tier]}; box-shadow:inset 0 0 4px ${item.tierColor || TIER_BORDER[item.tier]}66;"` : '';
+      invHtml += `<div class="inv-slot has-item ${broken ? 'broken':''}" title="${title}" ${tierStyle}><span class="key-hint">${keyHint}</span><span class="emoji">${item.emoji || item.ch || ''}</span>${durBar}</div>`;
     } else {
       invHtml += `<div class="inv-slot"><span class="key-hint">${keyHint}</span></div>`;
     }

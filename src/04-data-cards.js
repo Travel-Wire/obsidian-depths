@@ -1,6 +1,11 @@
 // ═══════════════════════════════════════════════
-// 04-data-cards.js — CARD_DEFS array (40 cards)
+// 04-data-cards.js — CARD_DEFS array (40+ cards)
 // ═══════════════════════════════════════════════
+
+// P2.2 — Cards meta configuration
+const CFG_CARDS = {
+  PITY_THRESHOLD: 10, // legendary guarantee after this many non-leg picks (was 7)
+};
 
 // ─── CARDS SYSTEM (PLAN 05) ─────────────────────
 // CARD_DEFS — 40+ cards, 5 categories (stat / perk / active / weapon / legendary / synergy)
@@ -145,7 +150,7 @@ const CARD_DEFS = [
     description:'Immune to fire; +50% damage vs bosses',
     recompute:(p,_st,_s)=>{ p.flags.dragonsBlood = true; } },
   { id:'mythril_body',  name:'Mythril Body',   emoji:'💎', tier:'legendary', category:'legendary', maxStacks:1,
-    description:'Armor never loses durability',
+    description:'-50% damage taken; armor wears 50% slower',
     recompute:(p,_st,_s)=>{ p.flags.mythrilBody = true; } },
   { id:'doppelganger',  name:'Doppelganger',   emoji:'🎭', tier:'legendary', category:'legendary', maxStacks:1,
     description:'25% chance: attack hits twice',
@@ -168,4 +173,21 @@ const CARD_DEFS = [
     prereqs:{ cards:[{id:'sharp_eyes',minStack:3},{id:'lucky',minStack:3}], minPlayerLevel:6 },
     weight:2.0,
     recompute:(p,_st,_s)=>{ p.critChance += 0.20; p.torchBonus += 2; p.flags.trueSight = true; } },
+
+  // ─── NEW LEGENDARIES (P2.2 — pool +5 to compensate pity 7→10) ───
+  { id:'time_warp',     name:'Time Warp',      emoji:'⏳', tier:'legendary', category:'legendary', maxStacks:1,
+    description:'Every 10 turns: take an extra free turn',
+    recompute:(p,_st,_s)=>{ p.flags.timeWarp = true; } },
+  { id:'death_ward',    name:'Death Ward',     emoji:'🛡️', tier:'legendary', category:'legendary', maxStacks:1,
+    description:'First lethal hit/run: revive at 100% HP',
+    recompute:(p,_st,_s)=>{ p.flags.deathWard = true; } },
+  { id:'soul_reaver',   name:'Soul Reaver',    emoji:'⚔️', tier:'legendary', category:'legendary', maxStacks:1,
+    description:'Killing an enemy refunds 25% of its max HP to you',
+    recompute:(p,_st,_s)=>{ p.flags.soulReaver = true; } },
+  { id:'phoenix_spirit',name:'Phoenix Spirit', emoji:'🔥', tier:'legendary', category:'legendary', maxStacks:1,
+    description:'On floor enter: full heal + cleanse statuses',
+    recompute:(p,_st,_s)=>{ p.flags.phoenixSpirit = true; } },
+  { id:'mind_flay',     name:'Mind Flay',      emoji:'🧠', tier:'legendary', category:'legendary', maxStacks:1,
+    description:'Crits also confuse the target for 3 turns',
+    recompute:(p,_st,_s)=>{ p.flags.mindFlay = true; } },
 ];

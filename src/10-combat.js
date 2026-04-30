@@ -2,6 +2,18 @@
 // 10-combat.js — Player attack, enemy attack, status effects
 // ═══════════════════════════════════════════════
 
+// v3-02 — find equipped Legendary with given unique mechanic id (or null)
+function findEquippedUnique(uniqueId) {
+  const eq = state.player.equipment;
+  for (const k of ['weapon','armor','offhand','accessory1','accessory2']) {
+    const it = eq[k];
+    if (!it) continue;
+    if (it.dur != null && it.dur <= 0) continue;
+    if (it.unique && it.unique.id === uniqueId) return it.unique;
+  }
+  return null;
+}
+
 function attackEnemy(enemy) {
   // Mimic reveal on attack
   if (enemy.state === 'DISGUISED') {
@@ -80,6 +92,15 @@ function attackEnemy(enemy) {
     spawnParticles(enemy.x, enemy.y, 20, enemy.color || '#ef4444', 3, 35);
     gainXP(enemy.xp);
     onEnemyKilled(enemy);
+    // v3-02 — Legendary "The Reaver": on-kill heal (in addition to lifesteal)
+    const reaver = findEquippedUnique('on_kill_heal');
+    if (reaver) {
+      const heal = reaver.value || 5;
+      const before = state.player.hp;
+      state.player.hp = Math.min(state.player.maxHp, state.player.hp + heal);
+      const gained = state.player.hp - before;
+      if (gained > 0) spawnFloatingText(state.player.x, state.player.y, `+${gained}`, '#fbbf24');
+    }
   } else {
     addMessage(`You hit the ${enemy.name} for ${dmg} damage.`, 'combat');
     if (secondStrike) {
@@ -115,15 +136,16 @@ function enemyAttack(enemy) {
   if (oh && oh.dur > 0 && oh.blockChance && Math.random() < oh.blockChance) {
     addMessage(`You block the ${enemy.name}'s attack!`, 'combat');
     spawnFloatingText(state.player.x, state.player.y, 'BLOCK', '#60a5fa');
-    if (!flags.mythrilBody) damageArmorDur(oh, incoming);
+    // Mythril Body P2.1: reduce wear by 50% (was full skip)
+    damageArmorDur(oh, flags.mythrilBody ? Math.ceil(incoming * 0.5) : incoming);
     return;
   }
 
   let dmg = Math.max(1, incoming - totalDef);
   // Resilient Aura: -1 dmg
   if (flags.resilientAura) dmg = Math.max(1, dmg - 1);
-  // Mythril Body: -2 dmg
-  if (flags.mythrilBody) dmg = Math.max(1, dmg - 2);
+  // Mythril Body (P2.1): cap at 50% reduction (was -2 flat / immunity to dur)
+  if (flags.mythrilBody) dmg = Math.max(1, Math.ceil(dmg * 0.5));
   // Endurance: % reduction
   if (p.dmgReduction > 0) dmg = Math.max(1, Math.ceil(dmg * (1 - p.dmgReduction)));
   state.player.hp -= dmg;
@@ -138,8 +160,36 @@ function enemyAttack(enemy) {
     processPassive('takeDamage', { enemy, dmg });
   }
 
-  // Armor durability tick (Mythril Body skips wear)
-  if (!flags.mythrilBody) damageArmorDur(getEquippedArmor(), incoming);
+  // v3-02 — Affix reflect (Aegis / Thorny): bounce a fraction of incoming melee dmg
+  let reflectPct = 0;
+  for (const slotKey of ['armor','offhand','accessory1','accessory2']) {
+    const it = p.equipment[slotKey];
+    if (!it || (it.dur != null && it.dur <= 0)) continue;
+    if (it.unique && it.unique.id === 'reflect_50') reflectPct = Math.max(reflectPct, it.unique.value || 0.5);
+  }
+  if (flags.affixReflect) reflectPct = Math.max(reflectPct, flags.affixReflect);
+  if (reflectPct > 0 && enemy.hp > 0) {
+    const refl = Math.max(1, Math.floor(incoming * reflectPct));
+    enemy.hp -= refl;
+    spawnFloatingText(enemy.x, enemy.y, `↩-${refl}`, '#fbbf24');
+    if (enemy.hp <= 0) { state.kills++; gainXP(enemy.xp); onEnemyKilled(enemy); }
+  }
+
+  // v3-02 — Legendary "Obsidian Heart": once-per-floor revive at lethal hit
+  if (state.player.hp <= 0) {
+    const heart = findEquippedUnique('floor_revive');
+    if (heart && !state.heartUsedThisFloor) {
+      state.heartUsedThisFloor = true;
+      state.player.hp = Math.max(1, Math.floor(state.player.maxHp * 0.5));
+      spawnParticles(state.player.x, state.player.y, 24, '#a78bfa', 3, 32);
+      spawnFloatingText(state.player.x, state.player.y, 'REVIVE!', '#a78bfa');
+      addMessage('Obsidian Heart pulses — you revive!', 'level');
+    }
+  }
+
+  // Armor durability tick (Mythril Body — v3-02 SPRINT P2.1: cap to 50% instead of immunity)
+  const armorWear = flags.mythrilBody ? Math.ceil(incoming * 0.5) : incoming;
+  damageArmorDur(getEquippedArmor(), armorWear);
 
   // Status effect emit
   if (enemy.poison) addStatusEffect(state.player, STATUS.POISON, enemy.poison.ticks, enemy.poison.dmg);

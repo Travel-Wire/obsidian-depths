@@ -953,8 +953,8 @@ const CFG = {
   TILE: 28,
   MAX_FLOOR: 10,
   FOV_RADIUS: 9, // legacy fallback (unused)
-  TORCH_RADIUS: 3,
-  TORCH_RADIUS_MAX: 6,
+  TORCH_RADIUS: 6,
+  TORCH_RADIUS_MAX: 9,
   LIT_ROOM_CHANCE: 0.20,
   LIT_ROOM_MIN_PER_FLOOR: 1,
   LIT_ROOM_AREA_THRESHOLD: 35,
@@ -980,7 +980,7 @@ const STATUS = {
   WEB: 'WEB', BLEED: 'BLEED', DRAIN_XP: 'DRAIN_XP',
 };
 
-const TILE = { WALL: 0, FLOOR: 1, STAIRS: 2, CORRIDOR: 3, ANVIL: 4 };
+const TILE = { WALL: 0, FLOOR: 1, STAIRS: 2, CORRIDOR: 3, ANVIL: 4, DOOR_CLOSED: 5, DOOR_OPEN: 6 };
 
 const EMOJI_FONT = `'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif`;
 
@@ -1539,7 +1539,8 @@ function executeActiveSkill(id) {
       for (let dx = -5; dx <= 5; dx++) {
         const tx = p.x + dx, ty = p.y + dy;
         if (tx < 0 || tx >= CFG.MAP_W || ty < 0 || ty >= CFG.MAP_H) continue;
-        if (state.map[ty][tx] === TILE.WALL) continue;
+        const blinkT = state.map[ty][tx];
+        if (blinkT === TILE.WALL || blinkT === TILE.DOOR_CLOSED) continue;
         if (!state.visible.has(key(tx, ty))) continue;
         if (state.enemies.find(e => e.x === tx && e.y === ty && e.hp > 0)) continue;
         const d = dist(p.x, p.y, tx, ty);
@@ -2063,6 +2064,31 @@ function generateDungeon(floor) {
     }
   }
 
+  // ─── DOORS ─────────────────────────────────
+  // Place a closed door on every corridor tile orthogonally adjacent to room floor.
+  // We snapshot the original CORRIDOR positions then upgrade qualifying ones to DOOR_CLOSED.
+  // This guarantees: every connection between corridor and room is a door (suspense + FOV blocking).
+  for (let y = 1; y < h - 1; y++) {
+    for (let x = 1; x < w - 1; x++) {
+      if (map[y][x] !== TILE.CORRIDOR) continue;
+      // adjacent to room floor (4-orthogonal)
+      let touchesRoom = false;
+      if (map[y - 1] && map[y - 1][x] === TILE.FLOOR) touchesRoom = true;
+      if (map[y + 1] && map[y + 1][x] === TILE.FLOOR) touchesRoom = true;
+      if (map[y][x - 1] === TILE.FLOOR) touchesRoom = true;
+      if (map[y][x + 1] === TILE.FLOOR) touchesRoom = true;
+      if (!touchesRoom) continue;
+      // avoid stacking two doors next to each other
+      let doorNeighbour = false;
+      if (map[y - 1] && map[y - 1][x] === TILE.DOOR_CLOSED) doorNeighbour = true;
+      if (map[y + 1] && map[y + 1][x] === TILE.DOOR_CLOSED) doorNeighbour = true;
+      if (map[y][x - 1] === TILE.DOOR_CLOSED) doorNeighbour = true;
+      if (map[y][x + 1] === TILE.DOOR_CLOSED) doorNeighbour = true;
+      if (doorNeighbour) continue;
+      map[y][x] = TILE.DOOR_CLOSED;
+    }
+  }
+
   for (const room of rooms) {
     const numTorches = rand(0, 2);
     for (let t = 0; t < numTorches; t++) {
@@ -2336,18 +2362,27 @@ function getRoomAt(x, y) {
 function computePlayerFOV() {
   const visible = computeFOV(state.player.x, state.player.y, effectiveTorchRadius());
   const room = getRoomAt(state.player.x, state.player.y);
-  if (room && room.lit) {
-    for (let dy = 0; dy < room.h; dy++) {
-      for (let dx = 0; dx < room.w; dx++) {
-        visible.add(key(room.x + dx, room.y + dy));
+  if (room) {
+    if (room.lit) {
+      // Lit rooms: every floor tile in room is visible.
+      for (let dy = 0; dy < room.h; dy++) {
+        for (let dx = 0; dx < room.w; dx++) {
+          visible.add(key(room.x + dx, room.y + dy));
+        }
       }
     }
-    // perimeter walls
+    // Always reveal the room's perimeter (walls AND doors) so the player sees
+    // the room outline & exits, even in unlit rooms — fixes the "sealed pit"
+    // perception bug when torch radius is shorter than the room dimension.
     for (let dy = -1; dy <= room.h; dy++) {
       for (let dx = -1; dx <= room.w; dx++) {
         const tx = room.x + dx, ty = room.y + dy;
         if (ty < 0 || ty >= CFG.MAP_H || tx < 0 || tx >= CFG.MAP_W) continue;
-        if (state.map[ty] && state.map[ty][tx] === TILE.WALL) visible.add(key(tx, ty));
+        if (!state.map[ty]) continue;
+        const t = state.map[ty][tx];
+        if (t === TILE.WALL || t === TILE.DOOR_CLOSED || t === TILE.DOOR_OPEN) {
+          visible.add(key(tx, ty));
+        }
       }
     }
   }
@@ -2411,7 +2446,8 @@ function castLight(cx, cy, radius, row, startSlope, endSlope, xx, xy, yx, yy, vi
 
 function isOpaque(x, y) {
   if (x < 0 || x >= CFG.MAP_W || y < 0 || y >= CFG.MAP_H) return true;
-  return state.map[y][x] === TILE.WALL;
+  const t = state.map[y][x];
+  return t === TILE.WALL || t === TILE.DOOR_CLOSED;
 }
 
 // ─── PARTICLES ──────────────────────────────────
@@ -2517,6 +2553,16 @@ function tryMove(dx, dy) {
   const candidates = getCandidateMoves(state.player.movementPattern, 0);
   const allowed = candidates.some(c => c.dx === dx && c.dy === dy);
   if (!allowed) return;
+
+  // Closed door — open it (1 turn), do not move yet. Player can step through next turn.
+  if (state.map[ny][nx] === TILE.DOOR_CLOSED) {
+    state.map[ny][nx] = TILE.DOOR_OPEN;
+    addMessage('You open the door.', 'info');
+    spawnParticles(nx, ny, 6, '#fbbf24', 1.2, 14);
+    state.player.energy -= ACTION_COST.WAIT;
+    processWorld();
+    return;
+  }
 
   const enemy = state.enemies.find(e => e.x === nx && e.y === ny && e.hp > 0);
   if (enemy) {
@@ -2904,7 +2950,9 @@ function stepTowardWithPattern(ex, ey, px, py, pattern, zigzagPhase, otherEnemie
   for (const c of candidates) {
     const nx = ex + c.dx, ny = ey + c.dy;
     if (nx < 0 || nx >= CFG.MAP_W || ny < 0 || ny >= CFG.MAP_H) continue;
-    if (state.map[ny][nx] === TILE.WALL) continue;
+    const tile = state.map[ny][nx];
+    if (tile === TILE.WALL) continue;
+    if (tile === TILE.DOOR_CLOSED) continue; // doors blocked here; aiMoveOrAttack handles opening
     if (nx === px && ny === py) continue; // can't step onto player (attack handled separately)
     if (otherEnemies.some(e => e.x === nx && e.y === ny && !(e.x === ex && e.y === ey) && e.hp > 0)) continue;
     anyValid = true;
@@ -2950,7 +2998,8 @@ function lineOfSight(a, b) {
   while (true) {
     if (!first && !(x0 === x1 && y0 === y1)) {
       if (x0 < 0 || x0 >= CFG.MAP_W || y0 < 0 || y0 >= CFG.MAP_H) return false;
-      if (state.map[y0][x0] === TILE.WALL) return false;
+      const lt = state.map[y0][x0];
+      if (lt === TILE.WALL || lt === TILE.DOOR_CLOSED) return false;
     }
     first = false;
     if (x0 === x1 && y0 === y1) return true;
@@ -2966,7 +3015,9 @@ function fleeDirection(e, target) {
   for (const c of candidates) {
     const nx = e.x + c.dx, ny = e.y + c.dy;
     if (nx < 0 || nx >= CFG.MAP_W || ny < 0 || ny >= CFG.MAP_H) continue;
-    if (state.map[ny][nx] === TILE.WALL) continue;
+    const tile = state.map[ny][nx];
+    if (tile === TILE.WALL) continue;
+    if (tile === TILE.DOOR_CLOSED) continue; // can't flee through a closed door
     if (nx === state.player.x && ny === state.player.y) continue;
     if (state.enemies.some(o => o !== e && o.x === nx && o.y === ny && o.hp > 0)) continue;
     const d = chebyshev({ x: nx, y: ny }, target);
@@ -3044,7 +3095,7 @@ function placeChild(parent, def) {
     const x = parent.x + dx, y = parent.y + dy;
     if (x < 0 || x >= CFG.MAP_W || y < 0 || y >= CFG.MAP_H) continue;
     const t = state.map[y][x];
-    if (t === TILE.WALL) continue;
+    if (t === TILE.WALL || t === TILE.DOOR_CLOSED) continue;
     if (state.enemies.some(en => en.x === x && en.y === y && en.hp > 0)) continue;
     const child = makeEnemyInstance(def, x, y, state.floor);
     child.maxHp = Math.floor((parent.maxHp || def.hp) * 0.5);
@@ -3095,6 +3146,29 @@ function damageEntity(entity, amount, type, ignoreDef) {
 }
 
 // ─── AI BEHAVIORS ────────────────────────────
+// Helper: if a closed door is the most-direct neighbour toward target, open it (1-turn action).
+// Returns true if the door was opened.
+function tryOpenAdjacentDoor(e, tgtX, tgtY, pattern) {
+  const candidates = getCandidateMoves(pattern || e.movementPattern || MOVE_PATTERN.ORTHOGONAL, 0);
+  let best = null, bestDist = Infinity;
+  for (const c of candidates) {
+    const nx = e.x + c.dx, ny = e.y + c.dy;
+    if (nx < 0 || nx >= CFG.MAP_W || ny < 0 || ny >= CFG.MAP_H) continue;
+    if (state.map[ny][nx] !== TILE.DOOR_CLOSED) continue;
+    const d = dist(nx, ny, tgtX, tgtY);
+    if (d < bestDist) { bestDist = d; best = { x: nx, y: ny }; }
+  }
+  if (best) {
+    // Only open if it actually moves us closer to target than our current tile.
+    if (bestDist <= dist(e.x, e.y, tgtX, tgtY)) {
+      state.map[best.y][best.x] = TILE.DOOR_OPEN;
+      e.energy -= ACTION_COST.WAIT;
+      return true;
+    }
+  }
+  return false;
+}
+
 function aiMoveOrAttack(e, pattern) {
   const px = state.player.x, py = state.player.y;
   if (isAdjacentForAttack({ ...e, movementPattern: pattern || e.movementPattern }, state.player)) {
@@ -3102,7 +3176,29 @@ function aiMoveOrAttack(e, pattern) {
     e.energy -= ACTION_COST.ATTACK;
     return;
   }
-  const step = stepTowardWithPattern(e.x, e.y, px, py, pattern || e.movementPattern || MOVE_PATTERN.ORTHOGONAL, e.zigzagPhase || 0, state.enemies);
+
+  // PLAN — Chase Memory: pick chase target. If we currently see the player, refresh memory.
+  // Otherwise fall back to lastSeenPlayer if recent.
+  let chaseX = px, chaseY = py;
+  let usingMemory = false;
+  const seesPlayer = state.visible.has(key(e.x, e.y)) || lineOfSight(e, state.player);
+  if (seesPlayer) {
+    e.lastSeenPlayer = { x: px, y: py, tick: state.worldTick };
+  } else if (e.lastSeenPlayer && (state.worldTick - e.lastSeenPlayer.tick) <= 15) {
+    chaseX = e.lastSeenPlayer.x;
+    chaseY = e.lastSeenPlayer.y;
+    usingMemory = true;
+    // Reset memory when we reach the spot.
+    if (e.x === chaseX && e.y === chaseY) {
+      e.lastSeenPlayer = null;
+      chaseX = px; chaseY = py;
+      usingMemory = false;
+    }
+  } else if (e.lastSeenPlayer) {
+    e.lastSeenPlayer = null; // expired
+  }
+
+  const step = stepTowardWithPattern(e.x, e.y, chaseX, chaseY, pattern || e.movementPattern || MOVE_PATTERN.ORTHOGONAL, e.zigzagPhase || 0, state.enemies);
   if (step) {
     const ox = e.x, oy = e.y;
     e.x = step.x; e.y = step.y;
@@ -3110,6 +3206,8 @@ function aiMoveOrAttack(e, pattern) {
     state.animations = state.animations.filter(a => a.entity !== e);
     addMoveAnim(e, ox, oy);
     e.energy -= ACTION_COST.MOVE;
+  } else if (tryOpenAdjacentDoor(e, chaseX, chaseY, pattern)) {
+    // Door was opened; turn consumed inside helper.
   } else {
     e.energy -= ACTION_COST.WAIT;
   }
@@ -3144,7 +3242,8 @@ function aiFlyer(e) {
     const cands = getCandidateMoves(MOVE_PATTERN.DIAGONAL, 0).filter(c => {
       const nx = e.x + c.dx, ny = e.y + c.dy;
       if (nx < 0 || nx >= CFG.MAP_W || ny < 0 || ny >= CFG.MAP_H) return false;
-      if (state.map[ny][nx] === TILE.WALL) return false;
+      const ft = state.map[ny][nx];
+      if (ft === TILE.WALL || ft === TILE.DOOR_CLOSED) return false;
       if (nx === state.player.x && ny === state.player.y) return false;
       if (state.enemies.some(o => o !== e && o.x === nx && o.y === ny && o.hp > 0)) return false;
       return true;
@@ -3254,7 +3353,8 @@ function aiCharger(e) {
     for (let i = 1; i <= (e.chargeRange || 3); i++) {
       const nx = e.x + dir.x, ny = e.y + dir.y;
       if (nx < 0 || nx >= CFG.MAP_W || ny < 0 || ny >= CFG.MAP_H) break;
-      if (state.map[ny][nx] === TILE.WALL) {
+      const ct = state.map[ny][nx];
+      if (ct === TILE.WALL || ct === TILE.DOOR_CLOSED) {
         e.hp -= 1; // recoil
         spawnFloatingText(e.x, e.y, '-1', '#ef4444');
         break;
@@ -3766,6 +3866,9 @@ function render(time) {
         baseColor = [50, 40, 20];
       } else if (tile === TILE.CORRIDOR) {
         baseColor = colorVariant(COLORS.corridorBase, tx, ty, state.seed, 4);
+      } else if (tile === TILE.DOOR_CLOSED || tile === TILE.DOOR_OPEN) {
+        // Door pad — dark wood-toned base, brighter than floor.
+        baseColor = [40, 28, 14];
       } else if (tileInLitRoom) {
         baseColor = colorVariant(COLORS.litRoomFloor, tx, ty, state.seed, 6);
       } else {
@@ -3796,7 +3899,14 @@ function render(time) {
 
         lightMult = clamp(lightMult, 0.15, 1);
       } else {
-        lightMult = 0.08;
+        // Explored-but-not-currently-visible. Corridors and doors stay
+        // brighter so the player can read the dungeon layout / paths even
+        // outside torch range. Other tiles use the original "fog" tint.
+        if (tile === TILE.CORRIDOR || tile === TILE.DOOR_CLOSED || tile === TILE.DOOR_OPEN) {
+          lightMult = 0.25;
+        } else {
+          lightMult = 0.08;
+        }
       }
 
       const r = Math.floor(baseColor[0] * lightMult);
@@ -3843,6 +3953,26 @@ function render(time) {
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText('⚒️', sx + T / 2, sy + T / 2 + 1);
+        ctx.restore();
+      }
+
+      if (tile === TILE.DOOR_CLOSED) {
+        ctx.save();
+        ctx.shadowColor = '#fbbf24';
+        ctx.shadowBlur = isVisible ? 8 : 0;
+        ctx.fillStyle = isVisible ? '#facc15' : 'rgba(180, 140, 50, 0.6)';
+        ctx.font = `bold ${T - 4}px 'JetBrains Mono', monospace`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('+', sx + T / 2, sy + T / 2 + 1);
+        ctx.restore();
+      } else if (tile === TILE.DOOR_OPEN) {
+        ctx.save();
+        ctx.fillStyle = isVisible ? '#a8a29e' : 'rgba(120, 110, 90, 0.55)';
+        ctx.font = `bold ${T - 4}px 'JetBrains Mono', monospace`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText("'", sx + T / 2, sy + T / 2 + 1);
         ctx.restore();
       }
     }

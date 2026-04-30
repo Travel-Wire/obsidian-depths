@@ -116,6 +116,8 @@ function newState() {
     exploredRooms: new Set(),
     // Perf P2.4: roomGrid[y*MAP_W+x] = (roomIndex+1) so 0 = "no room". O(1) lookup.
     roomGrid: null,
+    // v4-03 — wider corridors: synced doors. Map<groupId, Array<{x,y}>>; rebuilt per floor.
+    doorGroups: new Map(),
     // Perf P1.3: render-on-dirty.
     dirty: true,
     // Minimap dual-mode (v3-03).

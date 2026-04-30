@@ -128,6 +128,11 @@ function newState() {
     floorEnteredHp: 0,
     floorEnteredTurn: 0,
     curseActive: false,
+
+    // ─── v4-06 — UI redesign (MVP) ───
+    uiDrawerOpen: null,         // null | 'inventory'
+    seenTutorial: false,        // mirror of localStorage.seenTutorial
+    onboardingStep: 0,          // 0..3 active step index when overlay visible
   };
 }
 

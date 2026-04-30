@@ -1182,6 +1182,185 @@
     #card-modal.open ~ #touch-controls { display: none; }
   }
 
+  /* ─── v4-06: INVENTORY DRAWER (mobile) ─── */
+  #inventory-drawer {
+    position: fixed;
+    left: 0; right: 0;
+    bottom: 0;
+    height: 70vh;
+    z-index: 90;
+    background: rgba(8, 8, 16, 0.92);
+    border-top: 1px solid rgba(255, 180, 60, 0.3);
+    border-radius: 18px 18px 0 0;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    transform: translateY(100%);
+    transition: transform 200ms ease-out;
+    pointer-events: none;
+    display: flex;
+    flex-direction: column;
+    padding: 14px 16px calc(env(safe-area-inset-bottom, 8px) + 14px);
+    box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.6);
+  }
+  #inventory-drawer.open {
+    transform: translateY(0);
+    pointer-events: auto;
+  }
+  #inventory-drawer-handle {
+    width: 48px;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.25);
+    border-radius: 2px;
+    margin: 0 auto 10px;
+    flex-shrink: 0;
+  }
+  #inventory-drawer-title {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    color: #fbbf24;
+    text-align: center;
+    margin-bottom: 12px;
+    flex-shrink: 0;
+  }
+  #inventory-drawer-content {
+    flex: 1;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  #inventory-drawer-content .drawer-section-label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: #71717a;
+    margin: 8px 0 6px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  #inventory-drawer-equipment,
+  #inventory-drawer-items {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: flex-start;
+  }
+  #inventory-drawer-equipment .equip-slot,
+  #inventory-drawer-items .inv-slot {
+    width: 48px;
+    height: 48px;
+    font-size: 22px;
+  }
+  #inventory-drawer-items .inv-slot .emoji {
+    font-size: 24px;
+  }
+  #inventory-drawer-backdrop {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0, 0, 0, 0.4);
+    z-index: 89;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 200ms ease-out;
+  }
+  #inventory-drawer-backdrop.open {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  /* ─── v4-06: ONBOARDING OVERLAY ─── */
+  #onboarding-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    z-index: 250;
+    background: rgba(5, 5, 10, 0.88);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    pointer-events: auto;
+  }
+  #onboarding-overlay.show { display: flex; }
+  .onboarding-card {
+    background: rgba(12, 12, 22, 0.96);
+    border: 1px solid rgba(255, 180, 60, 0.35);
+    border-radius: 14px;
+    padding: 28px 24px;
+    max-width: 420px;
+    width: 100%;
+    text-align: center;
+    box-shadow: 0 12px 48px rgba(0, 0, 0, 0.7);
+    animation: onboardingIn 200ms ease-out;
+  }
+  @keyframes onboardingIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .onboarding-step-num {
+    font-size: 11px;
+    letter-spacing: 3px;
+    color: #71717a;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .onboarding-emoji {
+    font-size: 56px;
+    line-height: 1;
+    margin-bottom: 14px;
+    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.6));
+  }
+  .onboarding-text {
+    font-size: 16px;
+    color: #f1f5f9;
+    line-height: 1.5;
+    margin-bottom: 20px;
+    font-weight: 600;
+  }
+  .onboarding-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+  }
+  .onboarding-btn {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    color: #d4d4d8;
+    padding: 10px 22px;
+    border-radius: 10px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: background 150ms;
+  }
+  .onboarding-btn.primary {
+    background: rgba(251, 191, 36, 0.18);
+    border-color: rgba(251, 191, 36, 0.5);
+    color: #fbbf24;
+  }
+  .onboarding-btn:hover { background: rgba(255, 180, 60, 0.18); }
+  .onboarding-skip {
+    margin-top: 14px;
+    font-size: 11px;
+    color: #52525b;
+    text-decoration: underline;
+    cursor: pointer;
+    background: transparent;
+    border: none;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    #inventory-drawer { transition: none; }
+    #inventory-drawer-backdrop { transition: none; }
+    .onboarding-card { animation: none; }
+  }
+
   /* ─── CHARACTER SELECT (v3-06) ─── */
   #character-select-screen {
     position: absolute;
@@ -1481,6 +1660,32 @@
     <div class="fusion-tabs"></div>
     <div id="fusion-tab-content"></div>
     <div class="fusion-modal-hint">F — Fuse tab · ESC — close</div>
+  </div>
+</div>
+
+<!-- v4-06: Inventory drawer (mobile) -->
+<div id="inventory-drawer-backdrop"></div>
+<div id="inventory-drawer">
+  <div id="inventory-drawer-handle"></div>
+  <div id="inventory-drawer-title">Inventory</div>
+  <div id="inventory-drawer-content">
+    <div class="drawer-section-label">Equipment</div>
+    <div id="inventory-drawer-equipment"></div>
+    <div class="drawer-section-label">Items</div>
+    <div id="inventory-drawer-items"></div>
+  </div>
+</div>
+
+<!-- v4-06: Onboarding overlay (first run only) -->
+<div id="onboarding-overlay">
+  <div class="onboarding-card">
+    <div class="onboarding-step-num" id="onboarding-step-num">Step 1 of 4</div>
+    <div class="onboarding-emoji" id="onboarding-emoji">👆</div>
+    <div class="onboarding-text" id="onboarding-text">Tap on a tile to move there.</div>
+    <div class="onboarding-actions">
+      <button class="onboarding-btn primary" id="onboarding-next">Next</button>
+    </div>
+    <button class="onboarding-skip" id="onboarding-skip">Skip tutorial</button>
   </div>
 </div>
 

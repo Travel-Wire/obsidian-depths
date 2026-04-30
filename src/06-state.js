@@ -138,7 +138,11 @@ function newState() {
     curseActive: false,
 
     // ─── v4-02 — Fusion ───
-    fusionPending: null, // { primaryIdx, secondaryIdx, outcomes:[3], highlightId, anvilXY }
+    fusionPending: null,        // { primaryIdx, secondaryIdx, outcomes:[3], highlightId, anvilXY }
+    // ─── v4-06 — UI redesign (MVP) ───
+    uiDrawerOpen: null,         // null | 'inventory'
+    seenTutorial: false,        // mirror of localStorage.seenTutorial
+    onboardingStep: 0,          // 0..3 active step index when overlay visible
   };
 }
 

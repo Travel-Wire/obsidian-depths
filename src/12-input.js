@@ -359,6 +359,8 @@ registerScreenTap('win-screen');
 // Swipe gestures on game canvas
 let swipeStart = null;
 const SWIPE_THRESHOLD = 30;
+// v4-06: stronger threshold for drawer-open swipe to avoid accidental triggers.
+const DRAWER_SWIPE_THRESHOLD = 60;
 
 canvas.addEventListener('touchstart', (e) => {
   if (gamePhase !== 'playing') return;
@@ -377,6 +379,20 @@ canvas.addEventListener('touchend', (e) => {
   swipeStart = null;
   if (dt > 500) return;
   const absDx = Math.abs(dx), absDy = Math.abs(dy);
+
+  // v4-06: swipe-up from bottom 30% of screen → open inventory drawer (mobile only).
+  // Must be a clear vertical upward swipe (dy negative, |dy| > |dx|, |dy| >= DRAWER_SWIPE_THRESHOLD).
+  if (isMobile && state && !state.uiDrawerOpen) {
+    const ch = window.innerHeight;
+    const bottomZoneStart = ch * 0.7;
+    if (startTouch.y >= bottomZoneStart && dy < 0 && absDy >= DRAWER_SWIPE_THRESHOLD && absDy > absDx) {
+      if (typeof openInventoryDrawer === 'function') {
+        openInventoryDrawer();
+        return;
+      }
+    }
+  }
+
   if (absDx >= SWIPE_THRESHOLD || absDy >= SWIPE_THRESHOLD) {
     if (absDx > absDy) {
       tryMove(dx > 0 ? 1 : -1, 0);
@@ -436,3 +452,116 @@ document.addEventListener('touchmove', (e) => { e.preventDefault(); }, { passive
     if (typeof shopSell === 'function') shopSell(idx);
   });
 })();
+// ─── v4-06: Inventory drawer interactions ───
+{
+  const drawer = document.getElementById('inventory-drawer');
+  const backdrop = document.getElementById('inventory-drawer-backdrop');
+  const itemsRow = document.getElementById('inventory-drawer-items');
+  const equipRow = document.getElementById('inventory-drawer-equipment');
+
+  // Swipe-down on drawer to close.
+  let drawerSwipeStart = null;
+  if (drawer) {
+    drawer.addEventListener('touchstart', (e) => {
+      if (e.touches.length !== 1) return;
+      drawerSwipeStart = { y: e.touches[0].clientY, t: Date.now() };
+    }, { passive: true });
+    drawer.addEventListener('touchend', (e) => {
+      if (!drawerSwipeStart) return;
+      const dy = e.changedTouches[0].clientY - drawerSwipeStart.y;
+      const dt = Date.now() - drawerSwipeStart.t;
+      drawerSwipeStart = null;
+      if (dt > 600) return;
+      if (dy >= 60) {
+        if (typeof closeInventoryDrawer === 'function') closeInventoryDrawer();
+      }
+    }, { passive: true });
+  }
+
+  // Backdrop tap → close.
+  if (backdrop) {
+    const closeOnBackdrop = (e) => {
+      e.preventDefault();
+      if (typeof closeInventoryDrawer === 'function') closeInventoryDrawer();
+    };
+    backdrop.addEventListener('click', closeOnBackdrop);
+    backdrop.addEventListener('touchstart', closeOnBackdrop, { passive: false });
+  }
+
+  // Tap inventory item in drawer → use that item.
+  if (itemsRow) {
+    const useFromDrawer = (e) => {
+      const sl = e.target.closest('.inv-slot');
+      if (!sl || gamePhase !== 'playing') return;
+      const idx = parseInt(sl.dataset.slot);
+      if (Number.isFinite(idx) && idx >= 0 && idx < state.inventory.length) {
+        useItem(idx);
+        if (typeof closeInventoryDrawer === 'function') closeInventoryDrawer();
+      }
+    };
+    itemsRow.addEventListener('click', useFromDrawer);
+    itemsRow.addEventListener('touchstart', (e) => { e.preventDefault(); useFromDrawer(e); }, { passive: false });
+  }
+
+  // Tap equipment slot → unequip.
+  if (equipRow) {
+    const unequipFromDrawer = (e) => {
+      const sl = e.target.closest('.equip-slot');
+      if (!sl || gamePhase !== 'playing') return;
+      const slotName = sl.dataset.eq;
+      if (slotName) unequipItem(slotName);
+    };
+    equipRow.addEventListener('click', unequipFromDrawer);
+    equipRow.addEventListener('touchstart', (e) => { e.preventDefault(); unequipFromDrawer(e); }, { passive: false });
+  }
+
+  // ESC key closes drawer (desktop fallback).
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && state && state.uiDrawerOpen === 'inventory') {
+      e.preventDefault();
+      if (typeof closeInventoryDrawer === 'function') closeInventoryDrawer();
+    }
+    // 'I' key as alternative to swipe-up (helps testing on desktop).
+    if ((e.key === 'i' || e.key === 'I') && gamePhase === 'playing' && state && !state.choosingCard) {
+      if (state.uiDrawerOpen === 'inventory') {
+        if (typeof closeInventoryDrawer === 'function') closeInventoryDrawer();
+      } else {
+        if (typeof openInventoryDrawer === 'function') openInventoryDrawer();
+      }
+    }
+  });
+}
+
+// ─── v4-06: Onboarding overlay interactions ───
+{
+  const overlay = document.getElementById('onboarding-overlay');
+  const nextBtn = document.getElementById('onboarding-next');
+  const skipBtn = document.getElementById('onboarding-skip');
+
+  if (nextBtn) {
+    const advance = (e) => {
+      if (e) e.preventDefault();
+      if (typeof advanceOnboarding === 'function') advanceOnboarding();
+    };
+    nextBtn.addEventListener('click', advance);
+    nextBtn.addEventListener('touchstart', advance, { passive: false });
+  }
+  if (skipBtn) {
+    const skip = (e) => {
+      if (e) e.preventDefault();
+      if (typeof finishOnboarding === 'function') finishOnboarding();
+    };
+    skipBtn.addEventListener('click', skip);
+    skipBtn.addEventListener('touchstart', skip, { passive: false });
+  }
+  if (overlay) {
+    // Tap on backdrop (not card) doesn't close — must use Skip to avoid accidental dismiss.
+    // ESC also dismisses.
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && overlay.classList.contains('show')) {
+        e.preventDefault();
+        if (typeof finishOnboarding === 'function') finishOnboarding();
+      }
+    });
+  }
+}

@@ -25,6 +25,14 @@ function initGame() {
   } else {
     addMessage('You descend into the Obsidian Depths...', 'descend');
   }
+
+  // v4-06 — first-run onboarding (4-step). Persisted via localStorage.seenTutorial.
+  let seen = false;
+  try { seen = localStorage.getItem('seenTutorial') === '1'; } catch (e) { /* private mode */ }
+  state.seenTutorial = seen;
+  if (!seen && typeof showOnboarding === 'function') {
+    showOnboarding();
+  }
 }
 
 function tryMove(dx, dy) {

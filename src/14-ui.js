@@ -656,6 +656,165 @@ function backToTitle() {
   }
 }
 
+// ─── v4-06: INVENTORY DRAWER (mobile) ──────────────
+// Renders content inside #inventory-drawer mirroring desktop equipment + inventory bars.
+// Sig-cached to avoid per-frame innerHTML rebuild.
+function renderInventoryDrawer() {
+  const R = getUIRefs();
+  if (!R._drawerReady) {
+    R.drawerEl = document.getElementById('inventory-drawer');
+    R.drawerBackdrop = document.getElementById('inventory-drawer-backdrop');
+    R.drawerEquip = document.getElementById('inventory-drawer-equipment');
+    R.drawerItems = document.getElementById('inventory-drawer-items');
+    R._lastDrawerEquipSig = '';
+    R._lastDrawerInvSig = '';
+    R._drawerReady = true;
+  }
+  if (!R.drawerEl || !state) return;
+
+  const p = state.player;
+  // Equipment section
+  if (R.drawerEquip) {
+    const slotMeta = [
+      { key: 'weapon',     label: 'WPN' },
+      { key: 'armor',      label: 'ARM' },
+      { key: 'offhand',    label: 'OFF' },
+      { key: 'accessory1', label: 'AC1' },
+      { key: 'accessory2', label: 'AC2' },
+    ];
+    let sig = '';
+    for (const sm of slotMeta) {
+      const it = p.equipment[sm.key];
+      sig += it ? `${sm.key}:${it.instanceId || it.name}:${it.dur ?? ''}|` : `${sm.key}:_|`;
+    }
+    if (sig !== R._lastDrawerEquipSig) {
+      let html = '';
+      for (const sm of slotMeta) {
+        const it = p.equipment[sm.key];
+        if (!it) {
+          html += `<div class="equip-slot empty" data-eq="${sm.key}"><span class="slot-label">${sm.label}</span></div>`;
+        } else {
+          const broken = (it.dur != null && it.dur <= 0);
+          let durBar = '';
+          if (it.maxDur) {
+            const pct = (it.dur / it.maxDur);
+            durBar = `<div class="dur-bar"><div class="dur-fill" style="width:${pct*100}%; background:${durBarColor(pct)}"></div></div>`;
+          }
+          const title = (typeof formatItemTooltip === 'function') ? formatItemTooltip(it) : it.name;
+          const tierColor = (typeof it.tier === 'number' && typeof TIER !== 'undefined' && it.tier > TIER.COMMON)
+            ? (it.tierColor || (typeof TIER_BORDER !== 'undefined' && TIER_BORDER[it.tier])) : null;
+          const tierStyle = tierColor ? `style="border-color:${tierColor}; box-shadow:0 0 6px ${tierColor}55;"` : '';
+          html += `<div class="equip-slot ${broken ? 'broken':''}" data-eq="${sm.key}" title="${title}" ${tierStyle}><span class="slot-label">${sm.label}</span><span class="emoji">${it.emoji || '?'}</span>${durBar}</div>`;
+        }
+      }
+      R.drawerEquip.innerHTML = html;
+      R._lastDrawerEquipSig = sig;
+    }
+  }
+
+  // Items section
+  if (R.drawerItems) {
+    let sig = '';
+    for (let i = 0; i < CFG.INV_SIZE; i++) {
+      const it = state.inventory[i];
+      sig += it ? `${it.instanceId || it.name}:${it.dur ?? ''}|` : '_|';
+    }
+    if (sig !== R._lastDrawerInvSig) {
+      let html = '';
+      for (let i = 0; i < CFG.INV_SIZE; i++) {
+        const item = state.inventory[i];
+        const keyHint = (i === 9) ? '0' : `${i + 1}`;
+        if (item) {
+          const broken = (item.dur != null && item.dur <= 0);
+          let durBar = '';
+          if (item.maxDur) {
+            const pct = (item.dur / item.maxDur);
+            durBar = `<div class="dur-bar"><div class="dur-fill" style="width:${pct*100}%; background:${durBarColor(pct)}"></div></div>`;
+          }
+          const title = (typeof formatItemTooltip === 'function') ? formatItemTooltip(item) : item.name;
+          const tierColor = (typeof item.tier === 'number' && typeof TIER !== 'undefined' && item.tier > TIER.COMMON)
+            ? (item.tierColor || (typeof TIER_BORDER !== 'undefined' && TIER_BORDER[item.tier])) : null;
+          const tierStyle = tierColor ? `style="border-color:${tierColor}; box-shadow:inset 0 0 4px ${tierColor}66;"` : '';
+          html += `<div class="inv-slot has-item ${broken ? 'broken':''}" data-slot="${i}" title="${title}" ${tierStyle}><span class="key-hint">${keyHint}</span><span class="emoji">${item.emoji || item.ch || ''}</span>${durBar}</div>`;
+        } else {
+          html += `<div class="inv-slot" data-slot="${i}"><span class="key-hint">${keyHint}</span></div>`;
+        }
+      }
+      R.drawerItems.innerHTML = html;
+      R._lastDrawerInvSig = sig;
+    }
+  }
+}
+
+function openInventoryDrawer() {
+  if (!state) return;
+  state.uiDrawerOpen = 'inventory';
+  renderInventoryDrawer();
+  const R = getUIRefs();
+  if (R.drawerEl) R.drawerEl.classList.add('open');
+  if (R.drawerBackdrop) R.drawerBackdrop.classList.add('open');
+  state.dirty = true;
+}
+
+function closeInventoryDrawer() {
+  if (!state) return;
+  state.uiDrawerOpen = null;
+  const R = getUIRefs();
+  if (R.drawerEl) R.drawerEl.classList.remove('open');
+  if (R.drawerBackdrop) R.drawerBackdrop.classList.remove('open');
+  state.dirty = true;
+}
+
+// ─── v4-06: ONBOARDING (4-step, first-run only) ──────────────
+const ONBOARDING_STEPS = [
+  { emoji: '👆', text: 'Tap on a tile to move there.' },
+  { emoji: '⚔️', text: 'Tap on a monster to attack it.' },
+  { emoji: '🎒', text: 'Swipe up from the bottom to open your inventory.' },
+  { emoji: '▼',  text: 'Find the stairs and descend to the next floor.' },
+];
+
+function renderOnboarding() {
+  if (!state) return;
+  const overlay = document.getElementById('onboarding-overlay');
+  const numEl = document.getElementById('onboarding-step-num');
+  const emojiEl = document.getElementById('onboarding-emoji');
+  const textEl = document.getElementById('onboarding-text');
+  const nextBtn = document.getElementById('onboarding-next');
+  if (!overlay || !numEl || !emojiEl || !textEl || !nextBtn) return;
+  const idx = clamp(state.onboardingStep || 0, 0, ONBOARDING_STEPS.length - 1);
+  const step = ONBOARDING_STEPS[idx];
+  numEl.textContent = `Step ${idx + 1} of ${ONBOARDING_STEPS.length}`;
+  emojiEl.textContent = step.emoji;
+  textEl.textContent = step.text;
+  nextBtn.textContent = (idx === ONBOARDING_STEPS.length - 1) ? 'Start' : 'Next';
+}
+
+function showOnboarding() {
+  if (!state) return;
+  state.onboardingStep = 0;
+  const overlay = document.getElementById('onboarding-overlay');
+  if (!overlay) return;
+  overlay.classList.add('show');
+  renderOnboarding();
+}
+
+function advanceOnboarding() {
+  if (!state) return;
+  state.onboardingStep = (state.onboardingStep || 0) + 1;
+  if (state.onboardingStep >= ONBOARDING_STEPS.length) {
+    finishOnboarding();
+    return;
+  }
+  renderOnboarding();
+}
+
+function finishOnboarding() {
+  const overlay = document.getElementById('onboarding-overlay');
+  if (overlay) overlay.classList.remove('show');
+  if (state) state.seenTutorial = true;
+  try { localStorage.setItem('seenTutorial', '1'); } catch (e) { /* private mode */ }
+}
+
 function updateMobileUI() {
   const R = getUIRefs();
   const msgEl = R.mobileMsg;
@@ -693,6 +852,11 @@ function updateMobileUI() {
       invRow.innerHTML = html;
       R._lastMobileInvSig = sig;
     }
+  }
+
+  // v4-06: refresh drawer contents when open (sig-cached internally).
+  if (state.uiDrawerOpen === 'inventory' && typeof renderInventoryDrawer === 'function') {
+    renderInventoryDrawer();
   }
 }
 

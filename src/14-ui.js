@@ -7,11 +7,12 @@
 function formatItemTooltip(it) {
   if (!it) return '';
   const parts = [];
-  // Header: [Tier] Name
+  // Header: [Tier] Name +N
+  const upStr = (it.upgradeLevel && it.upgradeLevel > 0) ? ` +${it.upgradeLevel}` : '';
   if (typeof it.tier === 'number') {
-    parts.push(`[${TIER_NAMES[it.tier]}] ${it.name}`);
+    parts.push(`[${TIER_NAMES[it.tier]}] ${it.name}${upStr}`);
   } else {
-    parts.push(it.name);
+    parts.push(`${it.name}${upStr}`);
   }
   // Stats
   const stats = [];
@@ -19,6 +20,7 @@ function formatItemTooltip(it) {
   if (it.def != null) stats.push(`DEF ${it.def}`);
   if (it.maxHp != null) stats.push(`+${it.maxHp} HP`);
   if (it.critChance) stats.push(`+${Math.round(it.critChance*100)}% crit`);
+  if (it.blockChance) stats.push(`+${Math.round(it.blockChance*100)}% block`);
   if (it.maxDur != null) stats.push(`DUR ${it.dur}/${it.maxDur}`);
   if (stats.length > 0) parts.push(stats.join(' · '));
   // Affixes
@@ -27,6 +29,10 @@ function formatItemTooltip(it) {
   }
   // Unique mechanic (Legendary)
   if (it.unique && it.unique.desc) parts.push(`★ ${it.unique.desc}`);
+  // Fusion hint
+  if (it.slot && (it.upgradeLevel || 0) < 5 && (typeof TIER === 'undefined' || it.tier !== TIER.LEGENDARY)) {
+    parts.push('"Fuse with another at the anvil to upgrade"');
+  }
   return parts.join('\n');
 }
 
@@ -114,7 +120,7 @@ function updateUI() {
     let sig = '';
     for (const sm of slotMeta) {
       const it = p.equipment[sm.key];
-      sig += it ? `${sm.key}:${it.instanceId || it.name}:${it.dur ?? ''}|` : `${sm.key}:_|`;
+      sig += it ? `${sm.key}:${it.instanceId || it.name}:${it.dur ?? ''}:${it.upgradeLevel||0}|` : `${sm.key}:_|`;
     }
     if (sig !== R._lastEquipSig) {
       let eqHtml = '';
@@ -134,7 +140,10 @@ function updateUI() {
           const tierColor = (typeof it.tier === 'number' && typeof TIER !== 'undefined' && it.tier > TIER.COMMON)
             ? (it.tierColor || (typeof TIER_BORDER !== 'undefined' && TIER_BORDER[it.tier])) : null;
           const tierStyle = tierColor ? `style="border-color:${tierColor}; box-shadow:0 0 6px ${tierColor}55;"` : '';
-          eqHtml += `<div class="equip-slot ${broken ? 'broken':''}" data-eq="${sm.key}" title="${title}" ${tierStyle}><span class="slot-label">${sm.label}</span><span class="emoji">${it.emoji || '?'}</span>${durBar}</div>`;
+          // v4-02 upgrade badge
+          const upBadge = (it.upgradeLevel && it.upgradeLevel > 0)
+            ? `<span class="upgrade-badge ${it.upgradeLevel >= 5 ? 'maxed' : ''}">+${it.upgradeLevel}</span>` : '';
+          eqHtml += `<div class="equip-slot ${broken ? 'broken':''}" data-eq="${sm.key}" title="${title}" ${tierStyle}><span class="slot-label">${sm.label}</span><span class="emoji">${it.emoji || '?'}</span>${upBadge}${durBar}</div>`;
         }
       }
       R.equipBar.innerHTML = eqHtml;
@@ -147,7 +156,7 @@ function updateUI() {
     let sig = '';
     for (let i = 0; i < CFG.INV_SIZE; i++) {
       const it = state.inventory[i];
-      sig += it ? `${it.instanceId || it.name}:${it.dur ?? ''}|` : '_|';
+      sig += it ? `${it.instanceId || it.name}:${it.dur ?? ''}:${it.upgradeLevel||0}|` : '_|';
     }
     if (sig !== R._lastInvSig) {
       let invHtml = '';
@@ -166,7 +175,10 @@ function updateUI() {
           const tierColor = (typeof item.tier === 'number' && typeof TIER !== 'undefined' && item.tier > TIER.COMMON)
             ? (item.tierColor || (typeof TIER_BORDER !== 'undefined' && TIER_BORDER[item.tier])) : null;
           const tierStyle = tierColor ? `style="border-color:${tierColor}; box-shadow:inset 0 0 4px ${tierColor}66;"` : '';
-          invHtml += `<div class="inv-slot has-item ${broken ? 'broken':''}" title="${title}" ${tierStyle}><span class="key-hint">${keyHint}</span><span class="emoji">${item.emoji || item.ch || ''}</span>${durBar}</div>`;
+          // v4-02 upgrade badge
+          const upBadge = (item.upgradeLevel && item.upgradeLevel > 0)
+            ? `<span class="upgrade-badge ${item.upgradeLevel >= 5 ? 'maxed' : ''}">+${item.upgradeLevel}</span>` : '';
+          invHtml += `<div class="inv-slot has-item ${broken ? 'broken':''}" title="${title}" ${tierStyle}><span class="key-hint">${keyHint}</span><span class="emoji">${item.emoji || item.ch || ''}</span>${upBadge}${durBar}</div>`;
         } else {
           invHtml += `<div class="inv-slot"><span class="key-hint">${keyHint}</span></div>`;
         }
@@ -682,4 +694,176 @@ function updateMobileUI() {
       R._lastMobileInvSig = sig;
     }
   }
+}
+
+// ─── v4-02 FUSION MODAL ───────────────────────────
+let _fusionTab = 'Fuse'; // 'Repair' | 'Fuse'
+let _fusionAnvilXY = null; // { x, y } where the modal was opened
+
+function openFusionModal(tab) {
+  if (gamePhase !== 'playing') return;
+  const onAnvil = state.anvils && state.anvils.find(a => a.x === state.player.x && a.y === state.player.y && !a.used);
+  if (!onAnvil) {
+    addMessage('No usable anvil here.', 'info');
+    return;
+  }
+  _fusionAnvilXY = { x: onAnvil.x, y: onAnvil.y };
+  _fusionTab = tab || 'Fuse';
+  state.fusionPending = null;
+  const modal = document.getElementById('fusion-modal');
+  if (!modal) return;
+  modal.classList.remove('hidden');
+  renderFusionModal();
+}
+
+function closeFusionModal() {
+  const modal = document.getElementById('fusion-modal');
+  if (modal) modal.classList.add('hidden');
+  state.fusionPending = null;
+  _fusionAnvilXY = null;
+  state.dirty = true;
+}
+
+function renderFusionModal() {
+  const modal = document.getElementById('fusion-modal');
+  if (!modal || modal.classList.contains('hidden')) return;
+  const tabsEl = modal.querySelector('.fusion-tabs');
+  const contentEl = document.getElementById('fusion-tab-content');
+  if (!tabsEl || !contentEl) return;
+  // Tabs
+  tabsEl.innerHTML = `
+    <button data-tab="Repair" class="${_fusionTab==='Repair'?'active':''}">🔨 Repair</button>
+    <button data-tab="Fuse" class="${_fusionTab==='Fuse'?'active':''}">⚒️ Fuse</button>
+  `;
+  tabsEl.querySelectorAll('button').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      _fusionTab = btn.dataset.tab;
+      state.fusionPending = null;
+      renderFusionModal();
+    });
+  });
+
+  if (_fusionTab === 'Repair') {
+    contentEl.innerHTML = renderRepairTab();
+    const btn = contentEl.querySelector('#fusion-repair-btn');
+    if (btn) btn.addEventListener('click', () => {
+      if (_fusionAnvilXY) {
+        repairAt(_fusionAnvilXY.x, _fusionAnvilXY.y);
+        state.player.energy -= ACTION_COST.WAIT;
+        if (typeof processWorld === 'function') processWorld();
+      }
+      closeFusionModal();
+    });
+  } else {
+    contentEl.innerHTML = renderFuseTab();
+    // Wire pair clicks
+    contentEl.querySelectorAll('.fusion-pair').forEach(el => {
+      el.addEventListener('click', () => {
+        const a = parseInt(el.dataset.a), b = parseInt(el.dataset.b);
+        prepareFusion(a, b);
+        renderFusionModal();
+      });
+    });
+    // Wire confirm/cancel
+    const cBtn = contentEl.querySelector('#fusion-confirm-btn');
+    const xBtn = contentEl.querySelector('#fusion-cancel-btn');
+    if (cBtn) cBtn.addEventListener('click', () => {
+      if (state.fusionPending && _fusionAnvilXY) {
+        confirmFusion(_fusionAnvilXY.x, _fusionAnvilXY.y);
+        state.player.energy -= ACTION_COST.WAIT;
+        if (typeof processWorld === 'function') processWorld();
+      }
+      closeFusionModal();
+    });
+    if (xBtn) xBtn.addEventListener('click', () => {
+      cancelFusion();
+      renderFusionModal();
+    });
+  }
+}
+
+function renderRepairTab() {
+  const broken = [];
+  const p = state.player;
+  for (const k of ['weapon','armor','offhand']) {
+    const it = p.equipment[k];
+    if (it && it.maxDur && it.dur < it.maxDur) broken.push(it);
+  }
+  if (broken.length === 0) {
+    return `<div class="fusion-msg">Nothing to repair.</div>`;
+  }
+  const list = broken.map(it => `<div class="fusion-line">${it.emoji} ${it.name} — ${it.dur}/${it.maxDur}</div>`).join('');
+  return `
+    <div class="fusion-msg">Restore equipped gear to full durability.</div>
+    ${list}
+    <div class="fusion-actions">
+      <button id="fusion-repair-btn" class="fusion-btn primary">Repair All</button>
+    </div>
+  `;
+}
+
+function renderFuseTab() {
+  const inv = state.inventory;
+  const fp = state.fusionPending;
+
+  if (fp) {
+    const primary = inv[fp.primaryIdx];
+    const secondary = inv[fp.secondaryIdx];
+    if (!primary || !secondary) {
+      state.fusionPending = null;
+      return renderFuseTab();
+    }
+    const cards = fp.outcomes.map(o => {
+      const cls = o.highlighted ? 'highlighted' : 'dimmed';
+      return `<div class="outcome-card ${cls}">
+        <div class="outcome-emoji">${o.emoji}</div>
+        <div class="outcome-label">${o.label}</div>
+        <div class="outcome-desc">${o.desc}</div>
+        <div class="outcome-weight">${o.weight}%</div>
+      </div>`;
+    }).join('');
+    return `
+      <div class="fusion-msg">Fusion preview — outcome locked. Confirm or cancel.</div>
+      <div class="fusion-pair-row">
+        <div class="fusion-item primary">
+          <div class="emoji">${primary.emoji}</div>
+          <div>${primary.name}</div>
+          <div class="up">+${primary.upgradeLevel||0}</div>
+          <div class="role">Primary (kept)</div>
+        </div>
+        <div class="fusion-plus">+</div>
+        <div class="fusion-item secondary">
+          <div class="emoji">${secondary.emoji}</div>
+          <div>${secondary.name}</div>
+          <div class="up">+${secondary.upgradeLevel||0}</div>
+          <div class="role">Secondary (consumed)</div>
+        </div>
+      </div>
+      <div class="outcome-row">${cards}</div>
+      <div class="fusion-actions">
+        <button id="fusion-confirm-btn" class="fusion-btn primary">Confirm Fusion</button>
+        <button id="fusion-cancel-btn" class="fusion-btn">Cancel</button>
+      </div>
+    `;
+  }
+
+  // No pending fusion — list candidate pairs
+  const pairs = (typeof findFusionPairs === 'function') ? findFusionPairs() : [];
+  if (pairs.length === 0) {
+    return `<div class="fusion-msg">No fusible pairs in your inventory.<br><span style="color:#71717a">Need 2 items with same id and same upgrade level (not Legendary, not maxed).</span></div>`;
+  }
+  const items = pairs.map(([a, b]) => {
+    const ia = inv[a], ib = inv[b];
+    const lvl = ia.upgradeLevel || 0;
+    return `<div class="fusion-pair" data-a="${a}" data-b="${b}">
+      <span class="emoji">${ia.emoji}</span>
+      <span class="pair-name">${ia.name} +${lvl}</span>
+      <span class="pair-x">×2</span>
+      <span class="pair-action">→ Fuse</span>
+    </div>`;
+  }).join('');
+  return `
+    <div class="fusion-msg">Pick a pair to fuse. Outcome is rolled randomly (preview before confirm).</div>
+    <div class="fusion-pair-list">${items}</div>
+  `;
 }

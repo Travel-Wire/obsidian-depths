@@ -55,6 +55,127 @@ const AFFIX_DEFS = [
 
 function findAffix(id) { return AFFIX_DEFS.find(a => a.id === id); }
 
+// ─── v4-02 FUSION OUTCOMES ──────────────────────
+// MVP cut: 5% brick, 50% stat, 30% affix, 15% slot upgrade. Tier-upgrade SKIPPED.
+const FUSION_OUTCOMES = [
+  { id:'stat',   weight:50, label:'Stat Boost',     emoji:'⚔️', desc:'+1 atk/def' },
+  { id:'affix',  weight:30, label:'Affix Add',      emoji:'✨', desc:'+1 affix or upgrade' },
+  { id:'slot',   weight:15, label:'Slot Upgrade',   emoji:'💥', desc:'+5% crit/block/dodge' },
+  { id:'brick',  weight:5,  label:'Shatter!',       emoji:'💔', desc:'Both items destroyed' },
+];
+
+function rollFusionOutcome() {
+  const total = FUSION_OUTCOMES.reduce((s, o) => s + o.weight, 0);
+  let r = Math.random() * total;
+  for (const o of FUSION_OUTCOMES) {
+    r -= o.weight;
+    if (r <= 0) return o;
+  }
+  return FUSION_OUTCOMES[0];
+}
+
+// Returns [3 outcomes] with one .highlighted=true (the rolled one).
+// Display layer shows all 3, only the highlighted one is applied on Confirm.
+function previewFusionOutcomes() {
+  const chosen = rollFusionOutcome();
+  // Pick 2 distinct other outcomes for visual variety
+  const others = FUSION_OUTCOMES.filter(o => o.id !== chosen.id);
+  // Shuffle others, take 2
+  for (let i = others.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [others[i], others[j]] = [others[j], others[i]];
+  }
+  const cards = [
+    { ...chosen, highlighted: true },
+    { ...others[0], highlighted: false },
+    { ...others[1], highlighted: false },
+  ];
+  // Shuffle final card order so highlight isn't always first
+  for (let i = cards.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [cards[i], cards[j]] = [cards[j], cards[i]];
+  }
+  return cards;
+}
+
+// Apply fusion outcome to primary item. Mutates primary in place.
+// Returns { ok, brick } — brick=true means primary should be destroyed too.
+function applyFusionOutcome(primary, outcome) {
+  if (outcome.id === 'brick') {
+    return { ok: true, brick: true };
+  }
+  // Common: every fusion bumps upgradeLevel and grants base stat tick.
+  primary.upgradeLevel = (primary.upgradeLevel || 0) + 1;
+  if (primary.atk != null) primary.atk = Math.max(1, primary.atk + Math.max(1, Math.round(primary.atk * 0.10)));
+  if (primary.def != null) primary.def = Math.max(1, primary.def + Math.max(1, Math.round(primary.def * 0.10)));
+  if (primary.maxDur != null) {
+    primary.maxDur += 20;
+    primary.dur = primary.maxDur; // free repair on fusion
+  }
+  if (outcome.id === 'stat') {
+    // Extra +1 atk OR +1 def (whichever exists; if both — random)
+    const hasAtk = primary.atk != null;
+    const hasDef = primary.def != null;
+    if (hasAtk && hasDef) {
+      if (Math.random() < 0.5) primary.atk += 1; else primary.def += 1;
+    } else if (hasAtk) {
+      primary.atk += 1;
+    } else if (hasDef) {
+      primary.def += 1;
+    } else if (primary.maxHp != null) {
+      primary.maxHp += 5;
+    }
+  } else if (outcome.id === 'affix') {
+    primary.affixes = primary.affixes || [];
+    const tier = (typeof primary.tier === 'number') ? primary.tier : TIER.UNCOMMON;
+    const slot = primary.slot;
+    if (primary.affixes.length < 3) {
+      // Add new eligible affix not already present
+      const have = new Set(primary.affixes.map(a => a.id));
+      const eligible = AFFIX_DEFS.filter(a =>
+        a.tierMin <= Math.max(tier, TIER.UNCOMMON) && (!a.slots || a.slots.includes(slot)) && !have.has(a.id)
+      );
+      if (eligible.length > 0) {
+        const pick = eligible[Math.floor(Math.random() * eligible.length)];
+        primary.affixes.push(pick);
+        // Update display name with first affix prefix if not already
+        const baseName = primary.name.replace(/^.+? /, '');
+        if (primary.affixes.length === 1) primary.name = `${pick.displayPrefix} ${baseName}`;
+      } else {
+        // No room to add — fall back to stat boost
+        if (primary.atk != null) primary.atk += 1;
+        else if (primary.def != null) primary.def += 1;
+      }
+    } else {
+      // 3 affixes — upgrade first one to a stronger eligible variant if possible.
+      const first = primary.affixes[0];
+      // Try to find a tier-stronger version (e.g., crit5 → crit15)
+      const upgradeMap = { crit5:'crit15', lifesteal10:'lifesteal25' };
+      const upId = upgradeMap[first.id];
+      if (upId) {
+        const up = findAffix(upId);
+        if (up) primary.affixes[0] = up;
+      } else {
+        // No upgrade path — minor stat bump
+        if (primary.atk != null) primary.atk += 1;
+        else if (primary.def != null) primary.def += 1;
+      }
+    }
+  } else if (outcome.id === 'slot') {
+    // +5% crit / block / dodge by slot type. Cap @ +25%.
+    const slot = primary.slot;
+    if (slot === 'weapon') {
+      primary.critChance = Math.min(0.95, (primary.critChance || 0) + 0.05);
+    } else if (slot === 'offhand') {
+      primary.blockChance = Math.min(0.95, (primary.blockChance || 0) + 0.05);
+    } else if (slot === 'armor' || slot === 'accessory') {
+      primary.dodgeChanceBonus = Math.min(0.25, (primary.dodgeChanceBonus || 0) + 0.05);
+      // Note: dodgeChance is computed at recompute time — we stash a per-item bonus.
+    }
+  }
+  return { ok: true, brick: false };
+}
+
 // ─── ITEM_DEFS — base catalog with bazowy tier mapping ───
 // tierBase = the tier this item naturally maps to at ×1.00 multiplier
 // Mapping (per planner MVP cut): Rusty Dagger=Common, Iron Knife/Sword=Uncommon,

@@ -261,9 +261,36 @@ function render(time) {
     if (!state.visible.has(key(item.x, item.y))) continue;
     const sx = item.x * T + offsetX + T / 2;
     const sy = item.y * T + offsetY + T / 2;
+    const tileX = item.x * T + offsetX;
+    const tileY = item.y * T + offsetY;
+
+    // v3-02 — Tier color border (Common = no border, Uncommon+ = colored frame)
+    if (typeof item.tier === 'number' && item.tier > TIER.COMMON) {
+      const borderColor = item.tierColor || TIER_BORDER[item.tier];
+      ctx.save();
+      // Subtle background tint for high tiers
+      ctx.fillStyle = borderColor + (item.tier >= TIER.EPIC ? '33' : '22');
+      ctx.fillRect(tileX + 2, tileY + 2, T - 4, T - 4);
+      ctx.strokeStyle = borderColor;
+      ctx.lineWidth = 2;
+      ctx.strokeRect(tileX + 2, tileY + 2, T - 4, T - 4);
+      ctx.restore();
+      // Legendary glow particle (sparse, golden)
+      if (item.tier === TIER.LEGENDARY && Math.random() < 0.10) {
+        state.particles.push({
+          x: sx + rand(-6, 6),
+          y: sy + rand(-6, 6),
+          vx: randFloat(-0.2, 0.2),
+          vy: randFloat(-0.6, -0.2),
+          life: 28, maxLife: 28,
+          color: '#fbbf24',
+          size: randFloat(1.2, 2.4),
+        });
+      }
+    }
 
     ctx.save();
-    ctx.shadowColor = item.color || 'rgba(255,255,255,0.4)';
+    ctx.shadowColor = item.tierColor || item.color || 'rgba(255,255,255,0.4)';
     ctx.shadowBlur = 8;
     ctx.font = `${T - 4}px ${EMOJI_FONT}`;
     ctx.textAlign = 'center';

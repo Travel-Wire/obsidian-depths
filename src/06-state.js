@@ -101,6 +101,54 @@ function makeItemInstance(def, extra) {
   return inst;
 }
 
+// v3-02 — Build a tiered instance from a base def; applies stat ×mult + affixes.
+// For consumables (slot==null), tier is ignored — they stay flat.
+function makeTieredItem(def, tier, extra) {
+  const inst = makeItemInstance(def, extra);
+  // Consumables / non-equippables — return as-is, untiered.
+  if (!def.slot) return inst;
+  // Tier defaults to base if not provided
+  if (typeof tier !== 'number') tier = (def.tierBase != null ? def.tierBase : TIER.COMMON);
+  inst.tier = tier;
+  inst.tierName = TIER_NAMES[tier];
+  inst.tierColor = TIER_BORDER[tier];
+  // Stat multiplier vs bazowy tier (so a Common rolled at Rare = ×1.5/×1.0)
+  const baseTier = (def.tierBase != null ? def.tierBase : TIER.COMMON);
+  const mult = TIER_STATS[tier] / TIER_STATS[baseTier];
+  for (const stat of ['atk','def','maxDur','maxHp']) {
+    if (inst[stat] != null) inst[stat] = Math.max(1, Math.round(inst[stat] * mult));
+  }
+  if (inst.maxDur != null) inst.dur = inst.maxDur;
+  if (inst.critChance != null) inst.critChance = Math.min(0.95, inst.critChance * mult);
+  // Roll affixes
+  const affixCount = TIER_AFFIX_COUNT[tier];
+  inst.affixes = sampleAffixes(affixCount, tier, def.slot);
+  // Display name with first affix as prefix
+  if (inst.affixes.length > 0) {
+    inst.name = `${inst.affixes[0].displayPrefix} ${def.name}`;
+  }
+  return inst;
+}
+
+// Build a Legendary unique instance (already-defined affixes + unique mechanic)
+function makeLegendaryItem(legDef, extra) {
+  const inst = makeItemInstance(legDef, extra);
+  inst.tier = TIER.LEGENDARY;
+  inst.tierName = TIER_NAMES[TIER.LEGENDARY];
+  inst.tierColor = TIER_BORDER[TIER.LEGENDARY];
+  inst.affixes = (legDef.affixes || []).map(id => findAffix(id)).filter(Boolean);
+  inst.unique = legDef.unique || null;
+  inst.legendaryId = legDef.id;
+  return inst;
+}
+
+// Pick a Legendary unique eligible for floor; returns null if none available
+function pickLegendaryDef(floor) {
+  const pool = LEGENDARY_DEFS.filter(d => (d.minFloor || 1) <= floor);
+  if (pool.length === 0) return null;
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
 function pickWeightedItem(floor, predicate) {
   const eligible = ITEM_DEFS.filter(d => (d.minFloor || 1) <= floor && (!predicate || predicate(d)));
   if (eligible.length === 0) return null;

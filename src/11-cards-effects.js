@@ -78,8 +78,8 @@ function drawCardChoices(count = 3) {
   const pool = CARD_DEFS.filter(c => isCardAvailable(c));
   if (pool.length === 0) return [];
   const choices = [];
-  // F11 — pity slot when pityCounter >= 7: guarantee one legendary in this draft
-  const pityHit = state.pityCounter >= 7;
+  // P2.2 — pity threshold tuned 7 → 10 (less hojny: 3-4/run → ~2/run)
+  const pityHit = state.pityCounter >= (CFG_CARDS && CFG_CARDS.PITY_THRESHOLD || 10);
   for (let i = 0; i < count; i++) {
     const tierForce = (pityHit && i === 0) ? 'legendary' : null;
     const tier = tierForce || rollTier();
@@ -146,6 +146,18 @@ function recomputeStats() {
   for (const c of (state.cards || [])) {
     const def = findCardDef(c.id);
     if (def && def.recompute) def.recompute(p, state, c.stacks);
+  }
+
+  // v3-02 — Apply affixes from currently-equipped tiered items
+  const eqSlots = ['weapon','armor','offhand','accessory1','accessory2'];
+  for (const slot of eqSlots) {
+    const it = p.equipment[slot];
+    if (!it || !it.affixes) continue;
+    // broken weapon/armor: skip affix bonuses
+    if (it.dur != null && it.dur <= 0) continue;
+    for (const aff of it.affixes) {
+      if (aff && typeof aff.apply === 'function') aff.apply(p, state, it);
+    }
   }
 
   // Accessory maxHp bonus stacks on top
@@ -452,6 +464,12 @@ function processCardTicks() {
     p.hp = Math.min(p.maxHp, p.hp + 1);
     spawnFloatingText(p.x, p.y, '+1', '#4ade80');
   }
+  // v3-02 — Affix-driven regen (Regenerating prefix / Obsidian Heart / Aegis): +N HP / 3 ticks
+  if (p.flags.affixRegen && state.worldTick % 3 === 0 && p.hp < p.maxHp) {
+    const heal = p.flags.affixRegen | 0;
+    p.hp = Math.min(p.maxHp, p.hp + heal);
+    spawnFloatingText(p.x, p.y, `+${heal}`, '#84cc16');
+  }
 
   // Tornadoes (tempest): tick TTL & damage enemies on tile
   if (state.tornadoes && state.tornadoes.length > 0) {
@@ -499,5 +517,13 @@ function onEnemyKilled(e) {
   // Dagger Dance: next attack guaranteed crit
   if (state.player.flags && state.player.flags.daggerDance) {
     state.player.flags.daggerDanceCharged = true;
+  }
+  // P2.2 — Soul Reaver: refund 25% enemy maxHp on kill
+  if (state.player.flags && state.player.flags.soulReaver) {
+    const heal = Math.max(1, Math.floor((e.maxHp || 0) * 0.25));
+    const before = state.player.hp;
+    state.player.hp = Math.min(state.player.maxHp, state.player.hp + heal);
+    const gained = state.player.hp - before;
+    if (gained > 0) spawnFloatingText(state.player.x, state.player.y, `+${gained}`, '#a855f7');
   }
 }

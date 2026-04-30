@@ -268,16 +268,37 @@ function populateFloor(floor) {
     }
   }
 
-  // ─── ITEMS (per-room 2-3) ───
+  // ─── ITEMS (per-room 2-3) — v3-02: tier-aware spawn ───
+  // Boss room flag: F4/F6/F8/F10 — 1st item drop guaranteed min Rare (Epic at F8/F10)
+  let bossDropPending = (floor === 4 || floor === 6 || floor === 8 || floor === 10);
   for (let i = 1; i < state.rooms.length; i++) {
     const room = state.rooms[i];
     const numItems = rand(2, 3);
     for (let k = 0; k < numItems; k++) {
-      const def = pickWeightedItem(floor);
-      if (!def) continue;
       const free = findFreeTileInRoom(room, [...enemies, ...items]);
       if (!free) continue;
-      items.push(makeItemInstance(def, { x: free.x, y: free.y }));
+      // First, decide tier (only for equippables; consumables stay flat)
+      const tier = pickItemTier(floor, { bossDrop: bossDropPending });
+      if (bossDropPending) bossDropPending = false; // consume guarantee
+      let inst = null;
+      if (tier === TIER.LEGENDARY) {
+        const legDef = pickLegendaryDef(floor);
+        if (legDef) {
+          inst = makeLegendaryItem(legDef, { x: free.x, y: free.y });
+        }
+      }
+      if (!inst) {
+        // Roll a base def — prefer equippables for tier rolls; fall back to any
+        let baseDef = pickWeightedItem(floor, d => d.slot && !!d.tierBase != null);
+        if (!baseDef) baseDef = pickWeightedItem(floor);
+        if (!baseDef) continue;
+        if (baseDef.slot) {
+          inst = makeTieredItem(baseDef, tier, { x: free.x, y: free.y });
+        } else {
+          inst = makeItemInstance(baseDef, { x: free.x, y: free.y });
+        }
+      }
+      items.push(inst);
     }
   }
 
@@ -303,7 +324,13 @@ function populateFloor(floor) {
       if (!free) return;
       let def = (typeof defOrPicker === 'function') ? defOrPicker() : defOrPicker;
       if (!def) return;
-      items.push(makeItemInstance(def, { x: free.x, y: free.y }));
+      // v3-02: equippable guarantees roll a tier; consumables stay flat
+      if (def.slot) {
+        const tier = pickItemTier(floor);
+        items.push(makeTieredItem(def, tier, { x: free.x, y: free.y }));
+      } else {
+        items.push(makeItemInstance(def, { x: free.x, y: free.y }));
+      }
     }
   }
   ensureItemPredicate(i => i.type === 'weapon', () => pickWeightedItem(floor, d => d.type === 'weapon'));
@@ -347,6 +374,18 @@ function enterFloor(floor) {
   state.groundItems = pop.items;
   state.visible = computePlayerFOV();
   markExplored();
+
+  // v3-02 — Reset per-floor revive flags (Obsidian Heart)
+  state.heartUsedThisFloor = false;
+
+  // P2.2 — Phoenix Spirit: full heal + cleanse statuses on floor enter
+  if (state.player.flags && state.player.flags.phoenixSpirit) {
+    state.player.hp = state.player.maxHp;
+    state.player.statusEffects = [];
+    state.player.poisoned = 0;
+    spawnParticles(state.player.x, state.player.y, 18, '#f97316', 2.5, 30);
+    addMessage('Phoenix Spirit cleanses you!', 'level');
+  }
 }
 
 function markExplored() {

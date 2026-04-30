@@ -3,7 +3,21 @@
 // ═══════════════════════════════════════════════
 
 // ─── PLATFORM DETECT ────────────────────────────
-const isMobile = /Android|iPhone|iPad|iPod|webOS/i.test(navigator.userAgent) || ('ontouchstart' in window && window.innerWidth < 900);
+// Robust mobile detection — handles obfuscated UAs, tunneled origins, and tablets.
+// True if ANY of: legacy mobile UA, Mobi token, iPadOS-as-Mac, touch-capable device with <1100px viewport, or coarse pointer.
+const isMobile = (function() {
+  try {
+    const ua = navigator.userAgent || '';
+    if (/Mobi|Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(ua)) return true;
+    // iPadOS 13+ identifies as Mac with touch
+    if (ua.includes('Macintosh') && navigator.maxTouchPoints > 1) return true;
+    const touchable = ('ontouchstart' in window) || (navigator.maxTouchPoints && navigator.maxTouchPoints > 0);
+    if (touchable && window.innerWidth < 1100) return true;
+    // CSS-level coarse pointer (final fallback)
+    if (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) return true;
+  } catch (e) { /* fall through */ }
+  return false;
+})();
 
 // ─── UTILS ──────────────────────────────────────
 function rand(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }

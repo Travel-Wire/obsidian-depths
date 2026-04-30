@@ -293,9 +293,25 @@ function handleScreenTap(e) {
     }
   }
 }
-document.getElementById('title-screen').addEventListener('touchstart', handleScreenTap, { passive: false });
-document.getElementById('death-screen').addEventListener('touchstart', handleScreenTap, { passive: false });
-document.getElementById('win-screen').addEventListener('touchstart', handleScreenTap, { passive: false });
+// Universal screen-tap registration: try pointerdown (best), fall back to touchstart + click.
+// Some mobile webviews / privacy-shielded UAs don't deliver touchstart reliably, so click is a safety net.
+function registerScreenTap(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  let handled = false;
+  const wrap = (e) => {
+    if (handled) { handled = false; return; }
+    handled = true;
+    setTimeout(() => { handled = false; }, 350); // debounce duplicate touch+click pairs
+    handleScreenTap(e);
+  };
+  if (window.PointerEvent) el.addEventListener('pointerdown', wrap, { passive: false });
+  el.addEventListener('touchstart', wrap, { passive: false });
+  el.addEventListener('click', wrap);
+}
+registerScreenTap('title-screen');
+registerScreenTap('death-screen');
+registerScreenTap('win-screen');
 
 // Swipe gestures on game canvas
 let swipeStart = null;

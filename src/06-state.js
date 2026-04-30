@@ -56,6 +56,7 @@ function newState() {
       baseAtk: 4, baseDef: 1, baseMaxHp: 25, baseSpeed: SPEED.NORMAL,
       energy: 0, speed: SPEED.NORMAL, movementPattern: MOVE_PATTERN.ORTHOGONAL,
       statusEffects: [], torchBonus: 0, poisoned: 0,
+      tempHp: 0, // v4-05 — Aegis card temp HP shield (absorbs damage before HP)
       // PLAN 05 — card-applied stats
       critChance: 0, dodgeChance: 0, lifestealPct: 0, accuracyBonus: 0, dmgReduction: 0,
       flags: {}, // arbitrary perk flags (fireAura, iceAura, regen, sprinter, dualWield, tactical, etc.)

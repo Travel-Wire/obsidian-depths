@@ -503,4 +503,13 @@ function markExplored() {
       }
     }
   }
+  // v4-04 — Sense Danger: reveal traps within Chebyshev radius around player
+  const sdr = (state.player && state.player.flags && state.player.flags.senseDangerRadius) || 0;
+  if (sdr > 0 && state.traps) {
+    for (const t of state.traps) {
+      if (t.triggered || t.revealed) continue;
+      const d = Math.max(Math.abs(t.x - state.player.x), Math.abs(t.y - state.player.y));
+      if (d <= sdr) t.revealed = true;
+    }
+  }
 }

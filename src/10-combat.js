@@ -148,6 +148,13 @@ function enemyAttack(enemy) {
   if (flags.mythrilBody) dmg = Math.max(1, Math.ceil(dmg * 0.5));
   // Endurance: % reduction
   if (p.dmgReduction > 0) dmg = Math.max(1, Math.ceil(dmg * (1 - p.dmgReduction)));
+  // v4-05 — Aegis tempHp shield absorbs damage BEFORE HP
+  if ((p.tempHp || 0) > 0) {
+    const absorbed = Math.min(p.tempHp, dmg);
+    p.tempHp -= absorbed;
+    dmg -= absorbed;
+    spawnFloatingText(p.x, p.y, `-${absorbed}🛡`, '#60a5fa');
+  }
   state.player.hp -= dmg;
   if (flags.sprinter) p.sprinterTicks = 0;
   // v3-04: no_damage bonus tracker
@@ -240,6 +247,7 @@ function applyStatusEffects(entity) {
     } else if (fx.type === STATUS.REGEN) {
       const heal = fx.magnitude || 1;
       entity.hp = Math.min(entity.maxHp || entity.hp + heal, entity.hp + heal);
+      if (entity === state.player) spawnFloatingText(entity.x, entity.y, `+${heal}`, '#4ade80');
     }
   }
 }

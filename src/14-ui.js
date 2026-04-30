@@ -69,7 +69,19 @@ function updateUI() {
   const R = getUIRefs();
   const p = state.player;
   if (R.hpFill)  R.hpFill.style.width = `${(p.hp / p.maxHp) * 100}%`;
-  if (R.hpText)  R.hpText.textContent = `${p.hp} / ${p.maxHp}`;
+  // v4-05 — Aegis tempHp shield visual: white/blue glow overlay on hp-fill, plus "+N🛡" suffix on text
+  if (R.hpFill) {
+    const tHp = p.tempHp || 0;
+    if (tHp > 0) {
+      R.hpFill.style.boxShadow = `inset 0 0 0 2px rgba(96,165,250,0.95), 0 0 8px rgba(96,165,250,0.55)`;
+    } else {
+      R.hpFill.style.boxShadow = '';
+    }
+  }
+  if (R.hpText) {
+    const tHp = p.tempHp || 0;
+    R.hpText.textContent = tHp > 0 ? `${p.hp} / ${p.maxHp}  +${tHp}🛡` : `${p.hp} / ${p.maxHp}`;
+  }
   if (R.xpFill)  R.xpFill.style.width = `${(p.xp / p.xpNext) * 100}%`;
   if (R.sLevel)  R.sLevel.textContent = p.level;
   if (R.sAtk)    R.sAtk.textContent = getPlayerAtk();

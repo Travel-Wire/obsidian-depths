@@ -84,7 +84,7 @@ const CARD_DEFS = [
   // v4-04: Trap immunity active (Q/E)
   { id:'light_step',   name:'Light Step',   emoji:'👣', tier:'legendary', category:'active', maxStacks:1,
     description:'Next 5 turns ignore all traps. CD 12.',
-    cooldown:12,
+    active:{ cooldown:12 },
     recompute:(p,_st,_s)=>{ p.flags.lightStepKnown = true; } },
   // v4-05: Temp HP shield card
   { id:'aegis',        name:'Aegis',        emoji:'🛡️', tier:'rare', category:'perk', maxStacks:1,

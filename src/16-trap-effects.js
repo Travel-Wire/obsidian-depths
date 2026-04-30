@@ -3,6 +3,11 @@
 // ═══════════════════════════════════════════════
 
 function triggerTrap(trap) {
+  // v4-04 — Light Step active: avoid trap entirely (do not trigger, do not reveal further)
+  if (state.player.flags && state.player.flags.lightStepActive > 0) {
+    spawnFloatingText(state.player.x, state.player.y, 'AVOID', '#67e8f9');
+    return;
+  }
   trap.triggered = true;
   trap.revealed = true;
   const dmgRoll = trap.dmg && trap.dmg[1] > 0 ? rand(trap.dmg[0], trap.dmg[1]) : 0;

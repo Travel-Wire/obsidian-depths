@@ -399,6 +399,14 @@ function executeActiveSkill(id) {
     addMessage(`Frost Nova froze ${hit}!`, 'info');
     return true;
   }
+  if (id === 'light_step') {
+    // v4-04: 5 turns trap immunity
+    if (!p.flags) p.flags = {};
+    p.flags.lightStepActive = 5;
+    addMessage('Light Step engaged — traps avoided for 5 turns.', 'info');
+    spawnParticles(p.x, p.y, 18, '#67e8f9', 2.5, 28);
+    return true;
+  }
   if (id === 'death_touch') {
     let target = null, nd = 999;
     for (const e of state.enemies) {
@@ -499,10 +507,27 @@ function processCardTicks() {
 
   // Sprinter — count combat-free turns
   if (p.flags.sprinter) p.sprinterTicks = (p.sprinterTicks || 0) + 1;
+
+  // v4-04 — Light Step active duration tick
+  if (p.flags.lightStepActive && p.flags.lightStepActive > 0) {
+    p.flags.lightStepActive--;
+    if (p.flags.lightStepActive === 0) {
+      addMessage('Light Step fades.', 'info');
+    }
+  }
 }
 
 // On enemy killed hook (called from various damage-dealers)
 function onEnemyKilled(e) {
+  // v4-05 — Aegis: +20 tempHp per kill (capped at 50). Skip child/allied/non-real kills.
+  if (state.player.flags && state.player.flags.aegis && !e.isChild && !e.child && !e.allied) {
+    const before = state.player.tempHp || 0;
+    state.player.tempHp = Math.min(50, before + 20);
+    const gained = state.player.tempHp - before;
+    if (gained > 0) {
+      spawnFloatingText(state.player.x, state.player.y, `+${gained}🛡`, '#60a5fa');
+    }
+  }
   // Necromancer F14: child enemies don't trigger ally summon
   if (state.player.flags && state.player.flags.necromancer && !e.isChild && !e.child) {
     if (state.allies.length === 0 && Math.random() < 0.30) {

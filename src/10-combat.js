@@ -133,6 +133,11 @@ function enemyAttack(enemy) {
   state.screenShake = 3;
   addMessage(`The ${enemy.name} hits you for ${dmg} damage!`, 'combat');
 
+  // v3-06 — class passive: Knight Resolve trigger on low HP (after damage applied, before death check).
+  if (typeof processPassive === 'function') {
+    processPassive('takeDamage', { enemy, dmg });
+  }
+
   // Armor durability tick (Mythril Body skips wear)
   if (!flags.mythrilBody) damageArmorDur(getEquippedArmor(), incoming);
 

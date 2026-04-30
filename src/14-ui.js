@@ -85,6 +85,27 @@ function updateUI() {
     cardsEl.innerHTML = cardsHtml;
   }
 
+  // v3-06 — PASSIVE STATUS LINE (Knight Resolve cooldown / active, Berserker chain)
+  const passiveEl = document.getElementById('passive-status');
+  if (passiveEl && p.classKey) {
+    const charDef = (typeof findCharacterDef === 'function') ? findCharacterDef(p.classKey) : null;
+    if (charDef) {
+      let txt = `${charDef.portraitEmoji} ${charDef.passive.name}`;
+      if (charDef.passive.id === 'resolve') {
+        const active = p.passiveActive && p.passiveActive.resolve || 0;
+        const cd = p.passiveCooldowns && p.passiveCooldowns.resolve || 0;
+        if (active > 0) txt = `🛡️ Resolve ACTIVE ${active}t`;
+        else if (cd > 0) txt = `🛡️ Resolve CD ${cd}t`;
+        else txt = '🛡️ Resolve READY';
+      } else if (charDef.passive.id === 'bloodthirst') {
+        txt = `🩸 Bloodthirst x${p.killChainCount || 0}`;
+      } else if (charDef.passive.id === 'arcane_affinity') {
+        txt = '🪄 Arcane Affinity (scrolls +50%)';
+      }
+      passiveEl.textContent = txt;
+    }
+  }
+
   // PLAN 05 — ACTIVE SKILLS BAR
   const skillsEl = document.getElementById('active-skills-row');
   if (skillsEl) {
@@ -168,6 +189,126 @@ function showWinScreen() {
     <div class="death-stat">Total Kills <span>${state.kills}</span></div>
     <div class="death-stat">Turns Taken <span>${state.turns}</span></div>
   `;
+}
+
+// ─── CHARACTER SELECT (v3-06) ──────────────
+let _charSelectIndex = 0;
+
+function showCharacterSelect() {
+  gamePhase = 'character_select';
+  // Hide title/death/win overlays
+  document.getElementById('title-screen').classList.add('hidden');
+  document.getElementById('death-screen').classList.remove('show');
+  document.getElementById('win-screen').classList.remove('show');
+  const screen = document.getElementById('character-select-screen');
+  if (!screen) return;
+  screen.classList.add('show');
+  // Default to last-used class if available, else knight.
+  const defaultIdx = CHARACTER_DEFS.findIndex(c => c.key === (selectedCharacterKey || 'knight'));
+  _charSelectIndex = defaultIdx >= 0 ? defaultIdx : 0;
+  renderCharacterSelect();
+}
+
+function hideCharacterSelect() {
+  const screen = document.getElementById('character-select-screen');
+  if (screen) screen.classList.remove('show');
+}
+
+function renderCharacterSelect() {
+  const grid = document.getElementById('char-grid');
+  if (!grid) return;
+  let html = '';
+  CHARACTER_DEFS.forEach((c, idx) => {
+    const sel = (idx === _charSelectIndex) ? 'selected' : '';
+    const placeholder = c.implemented ? '' : 'placeholder';
+    const stars = '★'.repeat(c.difficulty) + '☆'.repeat(Math.max(0, 4 - c.difficulty));
+    html += `<div class="char-card ${sel} ${placeholder}" data-idx="${idx}" data-key="${c.key}">
+      <span class="char-card-key">[${idx + 1}]</span>
+      <div class="char-portrait">${c.portraitEmoji}</div>
+      <div class="char-card-name">${c.name}</div>
+      <div class="char-card-stars">${stars}</div>
+      <div class="char-card-tag">${c.playstyleTag}</div>
+    </div>`;
+  });
+  grid.innerHTML = html;
+  grid.querySelectorAll('.char-card').forEach(el => {
+    el.addEventListener('click', () => {
+      const idx = parseInt(el.dataset.idx);
+      _charSelectIndex = idx;
+      renderCharacterSelect();
+    });
+    el.addEventListener('dblclick', () => {
+      const idx = parseInt(el.dataset.idx);
+      _charSelectIndex = idx;
+      confirmCharacterSelect();
+    });
+  });
+  // Detail panel
+  const def = CHARACTER_DEFS[_charSelectIndex];
+  const detail = document.getElementById('char-detail-panel');
+  if (detail && def) {
+    const meta = (typeof loadMeta === 'function') ? loadMeta() : { runStats: {} };
+    const bestFloor = meta.runStats[def.key] ? (meta.runStats[def.key].bestFloor || 0) : 0;
+    const equipStr = ['weapon','armor','offhand','accessory1','accessory2']
+      .map(s => def.equipment[s])
+      .filter(x => x)
+      .map(id => {
+        const it = (typeof findItemDef === 'function') ? findItemDef(id) : null;
+        return it ? `${it.emoji} ${it.name}` : id;
+      }).join(' · ') || '—';
+    const cardsStr = (def.startingCards && def.startingCards.length > 0)
+      ? def.startingCards.map(cid => {
+          const cd = (typeof findCardDef === 'function') ? findCardDef(cid) : null;
+          return cd ? `${cd.emoji} ${cd.name}` : cid;
+        }).join(', ')
+      : '—';
+    const status = def.implemented ? '' : ' <span style="color:#71717a">(placeholder — limited features)</span>';
+    detail.innerHTML = `
+      <div class="char-detail-title">${def.portraitEmoji} ${def.name} — ${def.fullName}${status}</div>
+      <div class="char-detail-row">HP <span>${def.stats.hp}</span> · ATK <span>${def.stats.atk}</span> · DEF <span>${def.stats.def}</span> · SPD <span>${def.stats.speed}</span></div>
+      <div class="char-detail-row">Gear: <span>${equipStr}</span></div>
+      <div class="char-detail-row">Card: <span>${cardsStr}</span></div>
+      <div class="char-detail-row">Passive: <span>${def.passive.name}</span> — ${def.passive.desc}</div>
+      <div class="char-detail-row">Best Floor: <span>F${bestFloor}</span></div>
+      <div class="char-detail-lore">"${def.lore}"</div>
+    `;
+  }
+}
+
+function selectCharacterByIndex(idx) {
+  if (idx < 0 || idx >= CHARACTER_DEFS.length) return;
+  _charSelectIndex = idx;
+  renderCharacterSelect();
+}
+
+function confirmCharacterSelect() {
+  const def = CHARACTER_DEFS[_charSelectIndex];
+  if (!def) return;
+  selectedCharacterKey = def.key;
+  hideCharacterSelect();
+  document.getElementById('title-screen').classList.add('hidden');
+  gamePhase = 'playing';
+  initGame();
+}
+
+function backToTitle() {
+  hideCharacterSelect();
+  gamePhase = 'title';
+  document.getElementById('title-screen').classList.remove('hidden');
+}
+
+// Wire footer buttons (DOM ready by deferred script execution).
+{
+  const startBtn = document.getElementById('char-start-btn');
+  const backBtn = document.getElementById('char-back-btn');
+  if (startBtn) {
+    startBtn.addEventListener('click', () => confirmCharacterSelect());
+    startBtn.addEventListener('touchstart', (e) => { e.preventDefault(); confirmCharacterSelect(); }, { passive: false });
+  }
+  if (backBtn) {
+    backBtn.addEventListener('click', () => backToTitle());
+    backBtn.addEventListener('touchstart', (e) => { e.preventDefault(); backToTitle(); }, { passive: false });
+  }
 }
 
 function updateMobileUI() {

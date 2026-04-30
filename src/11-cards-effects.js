@@ -500,4 +500,9 @@ function onEnemyKilled(e) {
   if (state.player.flags && state.player.flags.daggerDance) {
     state.player.flags.daggerDanceCharged = true;
   }
+  // v3-06 — class passive on-kill hook (Berserker Bloodthirst).
+  // Skip child / allied entries (chain inflation guard).
+  if (typeof processPassive === 'function' && !e.isChild && !e.child && !e.allied) {
+    processPassive('kill', { enemy: e });
+  }
 }

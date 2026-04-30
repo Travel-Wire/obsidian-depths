@@ -28,7 +28,8 @@ function colorVariant(base, x, y, seed, range) {
 
 // ─── GAME STATE ─────────────────────────────────
 let state = null;
-let gamePhase = 'title'; // title, playing, dead, won
+let gamePhase = 'title'; // title, character_select, playing, dead, won
+let selectedCharacterKey = 'knight'; // chosen on character select screen
 
 function newState() {
   return {
@@ -48,6 +49,12 @@ function newState() {
       sprinterTicks: 0,            // tracks turns without combat
       lastStepX: 0, lastStepY: 0,  // for tempest tornado spawn
       equipment: { weapon: null, armor: null, offhand: null, accessory1: null, accessory2: null },
+      // v3-06 — character class & passive bookkeeping
+      classKey: 'knight',
+      passiveCooldowns: {},  // { resolve: turnsLeft }
+      passiveActive: {},     // { resolve: turnsLeft }
+      killChainCount: 0,     // Berserker Bloodthirst chain
+      turnsSinceLastKill: 0, // Bloodthirst chain reset
     },
     cards: [],            // [{ id, stacks }]
     activeSkills: [],     // [{ id, cdRemaining, slot }] — slot 0 = Q, 1 = E
@@ -171,6 +178,11 @@ function getPlayerDef() {
   d += getAccessoryDef();
   d += getStatusDefBonus();
   // PLAN 05: d += getCardBonus('def');
+  // v3-06 — Knight Resolve passive: +50% DEF while active
+  if (typeof getResolveDefMultiplier === 'function') {
+    const m = getResolveDefMultiplier();
+    if (m !== 1) d = Math.floor(d * m);
+  }
   return d;
 }
 

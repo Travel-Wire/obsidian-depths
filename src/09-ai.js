@@ -231,7 +231,12 @@ function tryOpenAdjacentDoor(e, tgtX, tgtY, pattern) {
   if (best) {
     // Only open if it actually moves us closer to target than our current tile.
     if (bestDist <= dist(e.x, e.y, tgtX, tgtY)) {
-      state.map[best.y][best.x] = TILE.DOOR_OPEN;
+      // v4-03 — multi-tile doorways: route through openDoor so the whole group flips.
+      if (typeof openDoor === 'function') {
+        openDoor(best.x, best.y);
+      } else {
+        state.map[best.y][best.x] = TILE.DOOR_OPEN;
+      }
       e.energy -= ACTION_COST.WAIT;
       return true;
     }

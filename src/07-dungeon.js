@@ -33,9 +33,11 @@ function generateDungeon(floor) {
     rooms.push({ x: rx, y: ry, w: rw, h: rh, cx: Math.floor(rx + rw / 2), cy: Math.floor(ry + rh / 2) });
   }
 
+  // v4-03 (MVP) — Width 1 or 2, 50/50 distribution. Per-edge width roll.
   for (let i = 1; i < rooms.length; i++) {
     const a = rooms[i - 1], b = rooms[i];
-    digCorridor(map, a.cx, a.cy, b.cx, b.cy);
+    const width = (Math.random() < 0.5) ? 1 : 2;
+    digCorridor(map, a.cx, a.cy, b.cx, b.cy, width);
   }
 
   if (rooms.length > 3) {
@@ -43,32 +45,67 @@ function generateDungeon(floor) {
     for (let i = 0; i < extra; i++) {
       const a = rooms[rand(0, rooms.length - 1)];
       const b = rooms[rand(0, rooms.length - 1)];
-      if (a !== b) digCorridor(map, a.cx, a.cy, b.cx, b.cy);
+      if (a !== b) {
+        const width = (Math.random() < 0.5) ? 1 : 2;
+        digCorridor(map, a.cx, a.cy, b.cx, b.cy, width);
+      }
     }
   }
 
+  // v4-03 — BFS connectivity guarantee. Player must reach every room.
+  guaranteeConnectivity(map, rooms);
+
   // ─── DOORS ─────────────────────────────────
-  // Place a closed door on every corridor tile orthogonally adjacent to room floor.
-  // We snapshot the original CORRIDOR positions then upgrade qualifying ones to DOOR_CLOSED.
-  // This guarantees: every connection between corridor and room is a door (suspense + FOV blocking).
+  // v4-03 (MVP) — Width-aware doorway groups. Identify maximal runs of corridor
+  // tiles touching room floor (perpendicular to corridor axis). Single-tile
+  // doorways behave as before; 2-tile doorways form a `doorGroup` so opening
+  // any tile flips both. Also collects groups in `doorGroupList` for state binding.
+  const doorGroupList = []; // [[{x,y},{x,y}], ...]
+
+  // Helper: corridor tile (x,y) is "doorway candidate" iff it's CORRIDOR and
+  // orthogonally adjacent to a FLOOR (room interior) tile.
+  function isDoorwayCandidate(x, y) {
+    if (map[y][x] !== TILE.CORRIDOR) return false;
+    if (map[y - 1] && map[y - 1][x] === TILE.FLOOR) return true;
+    if (map[y + 1] && map[y + 1][x] === TILE.FLOOR) return true;
+    if (map[y][x - 1] === TILE.FLOOR) return true;
+    if (map[y][x + 1] === TILE.FLOOR) return true;
+    return false;
+  }
+
+  const claimed = new Uint8Array(w * h); // tiles already placed as door
   for (let y = 1; y < h - 1; y++) {
     for (let x = 1; x < w - 1; x++) {
-      if (map[y][x] !== TILE.CORRIDOR) continue;
-      // adjacent to room floor (4-orthogonal)
-      let touchesRoom = false;
-      if (map[y - 1] && map[y - 1][x] === TILE.FLOOR) touchesRoom = true;
-      if (map[y + 1] && map[y + 1][x] === TILE.FLOOR) touchesRoom = true;
-      if (map[y][x - 1] === TILE.FLOOR) touchesRoom = true;
-      if (map[y][x + 1] === TILE.FLOOR) touchesRoom = true;
-      if (!touchesRoom) continue;
-      // avoid stacking two doors next to each other
-      let doorNeighbour = false;
-      if (map[y - 1] && map[y - 1][x] === TILE.DOOR_CLOSED) doorNeighbour = true;
-      if (map[y + 1] && map[y + 1][x] === TILE.DOOR_CLOSED) doorNeighbour = true;
-      if (map[y][x - 1] === TILE.DOOR_CLOSED) doorNeighbour = true;
-      if (map[y][x + 1] === TILE.DOOR_CLOSED) doorNeighbour = true;
-      if (doorNeighbour) continue;
+      if (claimed[y * w + x]) continue;
+      if (!isDoorwayCandidate(x, y)) continue;
+
+      // Look for an adjacent doorway candidate in either direction (N/S/E/W).
+      // We pair AT MOST one neighbor (width-2 cap) to form a group.
+      // Avoid pairing across an L-corner (we accept only orthogonally adjacent
+      // candidates that share the same axis-row/col).
+      let pair = null;
+      const tryPair = (nx, ny) => {
+        if (pair) return;
+        if (nx < 1 || nx >= w - 1 || ny < 1 || ny >= h - 1) return;
+        if (claimed[ny * w + nx]) return;
+        if (!isDoorwayCandidate(nx, ny)) return;
+        pair = { x: nx, y: ny };
+      };
+      tryPair(x + 1, y);
+      tryPair(x, y + 1);
+      tryPair(x - 1, y);
+      tryPair(x, y - 1);
+
+      // Place door(s).
       map[y][x] = TILE.DOOR_CLOSED;
+      claimed[y * w + x] = 1;
+      const group = [{ x, y }];
+      if (pair) {
+        map[pair.y][pair.x] = TILE.DOOR_CLOSED;
+        claimed[pair.y * w + pair.x] = 1;
+        group.push(pair);
+      }
+      if (group.length > 1) doorGroupList.push(group);
     }
   }
 
@@ -168,23 +205,116 @@ function generateDungeon(floor) {
     }
   }
 
-  return { map, explored, rooms, playerStart: { x: playerRoom.cx, y: playerRoom.cy }, stairsPos, torches, litSet, traps, anvils };
+  return { map, explored, rooms, playerStart: { x: playerRoom.cx, y: playerRoom.cy }, stairsPos, torches, litSet, traps, anvils, doorGroupList };
 }
 
-function digCorridor(map, x1, y1, x2, y2) {
-  let x = x1, y = y1;
+// v4-03 (MVP) — Width-aware corridor digger. Supported widths: 1, 2.
+// Width 2 paints a 2-tile-thick path (axis tile + one perpendicular offset).
+// Offset side is chosen once per corridor to avoid zig-zag. Out-of-bounds offsets
+// are silently dropped (paintCorridor bounds-checks).
+function digCorridor(map, x1, y1, x2, y2, width) {
+  if (width == null) width = 1;
+  width = (width === 2) ? 2 : 1;
+
+  // Choose perpendicular offset side once per corridor (left/right of axis).
+  // For width-2: offset is +1 in the perpendicular dimension of the current segment.
+  // perpSign in {-1, +1} (we lean toward +1 unless that hits the edge for entire segment).
+  const perpSign = (Math.random() < 0.5) ? -1 : 1;
+
   const horizFirst = Math.random() > 0.5;
 
+  // Carve a single horizontal segment from (ax,y) to (bx,y); width adds tiles in y±perp.
+  function carveH(ax, bx, y) {
+    const step = (bx >= ax) ? 1 : -1;
+    let x = ax;
+    while (true) {
+      paintCorridor(map, x, y);
+      if (width === 2) paintCorridor(map, x, y + perpSign);
+      if (x === bx) break;
+      x += step;
+    }
+  }
+  // Carve a single vertical segment from (x,ay) to (x,by); width adds tiles in x±perp.
+  function carveV(ay, by, x) {
+    const step = (by >= ay) ? 1 : -1;
+    let y = ay;
+    while (true) {
+      paintCorridor(map, x, y);
+      if (width === 2) paintCorridor(map, x + perpSign, y);
+      if (y === by) break;
+      y += step;
+    }
+  }
+
   if (horizFirst) {
-    while (x !== x2) { if (map[y][x] === TILE.WALL) map[y][x] = TILE.CORRIDOR; x += x < x2 ? 1 : -1; }
-    if (map[y][x] === TILE.WALL) map[y][x] = TILE.CORRIDOR;
-    while (y !== y2) { if (map[y][x] === TILE.WALL) map[y][x] = TILE.CORRIDOR; y += y < y2 ? 1 : -1; }
-    if (map[y][x] === TILE.WALL) map[y][x] = TILE.CORRIDOR;
+    carveH(x1, x2, y1);
+    carveV(y1, y2, x2);
   } else {
-    while (y !== y2) { if (map[y][x] === TILE.WALL) map[y][x] = TILE.CORRIDOR; y += y < y2 ? 1 : -1; }
-    if (map[y][x] === TILE.WALL) map[y][x] = TILE.CORRIDOR;
-    while (x !== x2) { if (map[y][x] === TILE.WALL) map[y][x] = TILE.CORRIDOR; x += x < x2 ? 1 : -1; }
-    if (map[y][x] === TILE.WALL) map[y][x] = TILE.CORRIDOR;
+    carveV(y1, y2, x1);
+    carveH(x1, x2, y2);
+  }
+}
+
+// v4-03 — paint a single corridor tile if in-bounds and currently WALL.
+// FLOOR/CORRIDOR/etc are left alone (room overlap takes precedence).
+function paintCorridor(map, x, y) {
+  const W = CFG.MAP_W, H = CFG.MAP_H;
+  if (x < 1 || x > W - 2 || y < 1 || y > H - 2) return;
+  if (map[y][x] === TILE.WALL) map[y][x] = TILE.CORRIDOR;
+}
+
+// v4-03 — BFS from rooms[0].center across passable tiles; for any unreached
+// room, dig a width-1 corridor from its center to the nearest visited tile,
+// then continue BFS from that room. Guarantees full connectivity post-pass.
+function guaranteeConnectivity(map, rooms) {
+  if (rooms.length === 0) return;
+  const W = CFG.MAP_W, H = CFG.MAP_H;
+  const visited = new Uint8Array(W * H);
+
+  function isPassable(t) {
+    return t === TILE.FLOOR || t === TILE.CORRIDOR || t === TILE.DOOR_CLOSED || t === TILE.DOOR_OPEN || t === TILE.STAIRS || t === TILE.ANVIL;
+  }
+
+  function bfsFrom(sx, sy) {
+    const queue = [sx, sy];
+    visited[sy * W + sx] = 1;
+    while (queue.length) {
+      const x = queue.shift();
+      const y = queue.shift();
+      const neigh = [[x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]];
+      for (const [nx, ny] of neigh) {
+        if (nx < 0 || nx >= W || ny < 0 || ny >= H) continue;
+        if (visited[ny * W + nx]) continue;
+        if (!isPassable(map[ny][nx])) continue;
+        visited[ny * W + nx] = 1;
+        queue.push(nx, ny);
+      }
+    }
+  }
+
+  bfsFrom(rooms[0].cx, rooms[0].cy);
+
+  for (let pass = 0; pass < 3; pass++) {
+    let allReached = true;
+    for (let i = 1; i < rooms.length; i++) {
+      const r = rooms[i];
+      if (visited[r.cy * W + r.cx]) continue;
+      allReached = false;
+      // Find nearest visited tile by manhattan distance.
+      let best = null, bestD = Infinity;
+      for (let y = 1; y < H - 1; y++) {
+        for (let x = 1; x < W - 1; x++) {
+          if (!visited[y * W + x]) continue;
+          const d = Math.abs(x - r.cx) + Math.abs(y - r.cy);
+          if (d < bestD) { bestD = d; best = { x, y }; }
+        }
+      }
+      if (best) {
+        digCorridor(map, r.cx, r.cy, best.x, best.y, 1);
+        bfsFrom(r.cx, r.cy);
+      }
+    }
+    if (allReached) break;
   }
 }
 
@@ -379,6 +509,15 @@ function enterFloor(floor) {
   state.litRooms = dungeon.litSet || new Set();
   state.anvils = dungeon.anvils || [];
   state.webTiles = [];
+
+  // v4-03 — bind multi-tile door groups. doorGroups: Map<groupId, [{x,y},...]>;
+  // doorGroupByCoord (lazily-built lookup) is exposed via openDoor() helper.
+  state.doorGroups = new Map();
+  if (dungeon.doorGroupList && dungeon.doorGroupList.length) {
+    for (let gi = 0; gi < dungeon.doorGroupList.length; gi++) {
+      state.doorGroups.set(gi, dungeon.doorGroupList[gi]);
+    }
+  }
   state.player.x = dungeon.playerStart.x;
   state.player.y = dungeon.playerStart.y;
   state.player.energy = 0;
@@ -476,4 +615,30 @@ function markExplored() {
       }
     }
   }
+}
+
+// v4-03 — open a door at (x,y). If the tile belongs to a doorGroup, all member
+// tiles flip to DOOR_OPEN in the same call. Safe to invoke for non-grouped doors.
+// Returns the array of tiles that were actually flipped.
+function openDoor(x, y) {
+  const flipped = [];
+  if (!state.map[y] || state.map[y][x] !== TILE.DOOR_CLOSED) {
+    // Already open or not a door — no-op.
+    return flipped;
+  }
+  // Find group membership (linear scan; groups are small and few per floor).
+  let group = null;
+  if (state.doorGroups && state.doorGroups.size) {
+    for (const tiles of state.doorGroups.values()) {
+      if (tiles.some(t => t.x === x && t.y === y)) { group = tiles; break; }
+    }
+  }
+  const targets = group || [{ x, y }];
+  for (const t of targets) {
+    if (state.map[t.y] && state.map[t.y][t.x] === TILE.DOOR_CLOSED) {
+      state.map[t.y][t.x] = TILE.DOOR_OPEN;
+      flipped.push({ x: t.x, y: t.y });
+    }
+  }
+  return flipped;
 }

@@ -45,9 +45,18 @@ function tryMove(dx, dy) {
 
   // Closed door — open it (1 turn), do not move yet. Player can step through next turn.
   if (state.map[ny][nx] === TILE.DOOR_CLOSED) {
-    state.map[ny][nx] = TILE.DOOR_OPEN;
+    // v4-03 — multi-tile doorways: openDoor flips the whole group at once.
+    const flipped = (typeof openDoor === 'function') ? openDoor(nx, ny) : null;
+    if (!flipped || flipped.length === 0) {
+      state.map[ny][nx] = TILE.DOOR_OPEN;
+    }
     addMessage('You open the door.', 'info');
     spawnParticles(nx, ny, 6, '#fbbf24', 1.2, 14);
+    if (flipped && flipped.length > 1) {
+      for (let i = 1; i < flipped.length; i++) {
+        spawnParticles(flipped[i].x, flipped[i].y, 6, '#fbbf24', 1.2, 14);
+      }
+    }
     state.player.energy -= ACTION_COST.WAIT;
     processWorld();
     return;

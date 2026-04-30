@@ -359,3 +359,37 @@ canvas.addEventListener('touchend', (e) => {
 
 // Prevent zoom/scroll
 document.addEventListener('touchmove', (e) => { e.preventDefault(); }, { passive: false });
+
+// ─── v4-01 Shop Modal handlers ──────────────────
+(function attachShopHandlers() {
+  const modal = document.getElementById('shop-modal');
+  if (!modal) return;
+  const closeBtn = document.getElementById('shop-modal-close');
+  if (closeBtn) closeBtn.addEventListener('click', () => closeShopModal());
+  modal.addEventListener('click', (e) => { if (e.target === modal) closeShopModal(); });
+
+  const buyList = document.getElementById('shop-buy-list');
+  const sellList = document.getElementById('shop-sell-list');
+  const tabs = document.querySelectorAll('.shop-tab');
+
+  tabs.forEach(t => t.addEventListener('click', () => {
+    tabs.forEach(x => x.classList.remove('active'));
+    t.classList.add('active');
+    const which = t.dataset.tab;
+    if (buyList)  buyList.style.display  = which === 'buy'  ? '' : 'none';
+    if (sellList) sellList.style.display = which === 'sell' ? '' : 'none';
+  }));
+
+  if (buyList) buyList.addEventListener('click', (e) => {
+    const row = e.target.closest('[data-buy-idx]');
+    if (!row) return;
+    const idx = parseInt(row.dataset.buyIdx);
+    if (typeof shopBuy === 'function') shopBuy(idx);
+  });
+  if (sellList) sellList.addEventListener('click', (e) => {
+    const row = e.target.closest('[data-sell-idx]');
+    if (!row) return;
+    const idx = parseInt(row.dataset.sellIdx);
+    if (typeof shopSell === 'function') shopSell(idx);
+  });
+})();

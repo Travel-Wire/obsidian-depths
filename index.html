@@ -220,6 +220,56 @@
     padding: 4px 8px;
   }
   #minimap-modal-legend span b { color: #fbbf24; font-weight: 700; }
+
+  /* v4-01 Shop Modal */
+  #shop-modal {
+    position: fixed; inset: 0; z-index: 96; display: none;
+    background: rgba(0,0,0,0.75); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+    align-items: center; justify-content: center; pointer-events: auto;
+  }
+  #shop-modal.open { display: flex; }
+  #shop-modal-content {
+    width: min(560px, 92vw); max-height: 86vh; overflow: hidden;
+    background: rgba(12, 12, 22, 0.97);
+    border: 1px solid rgba(103, 232, 249, 0.35);
+    border-radius: 16px; padding: 16px;
+    display: flex; flex-direction: column; gap: 10px; pointer-events: auto;
+  }
+  #shop-modal-header {
+    display: flex; justify-content: space-between; align-items: center; gap: 10px;
+    font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #cbd5e1;
+  }
+  .shop-title { font-size: 18px; font-weight: 700; color: #67e8f9; }
+  #shop-crystals { color: #67e8f9; font-weight: 700; }
+  #shop-modal-close {
+    background: rgba(255,255,255,0.05); border: 1px solid rgba(103, 232, 249, 0.4);
+    color: #67e8f9; width: 32px; height: 32px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 16px;
+  }
+  #shop-tabs { display: flex; gap: 8px; }
+  .shop-tab {
+    flex: 1; padding: 8px 12px; background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(103, 232, 249, 0.2); color: #94a3b8;
+    border-radius: 8px; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 13px;
+    transition: all 0.15s;
+  }
+  .shop-tab.active { background: rgba(103, 232, 249, 0.15); color: #67e8f9; border-color: #67e8f9; }
+  .shop-list {
+    overflow-y: auto; max-height: 60vh; display: flex; flex-direction: column; gap: 6px;
+  }
+  .shop-item {
+    display: flex; align-items: center; gap: 10px; padding: 8px 12px;
+    background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 8px; cursor: pointer; transition: all 0.15s;
+  }
+  .shop-item:hover { background: rgba(103, 232, 249, 0.08); border-color: rgba(103, 232, 249, 0.3); }
+  .shop-item .emoji { font-size: 22px; }
+  .shop-item .iname { flex: 1; font-family: 'Inter', sans-serif; font-size: 13px; color: #e5e7eb; }
+  .shop-item .iprice { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #67e8f9; font-weight: 700; }
+  .shop-empty {
+    padding: 20px; text-align: center; color: #71717a;
+    font-family: 'JetBrains Mono', monospace; font-size: 12px;
+  }
   #minimap-hint {
     font-size: 10px; color: #52525b;
     font-family: 'JetBrains Mono', monospace;
@@ -1106,6 +1156,7 @@
     <div class="stat-row"><span class="stat-label">DEF</span><span class="stat-value def" id="s-def">1</span></div>
     <div class="stat-row"><span class="stat-label">FLOOR</span><span class="stat-value floor" id="s-floor">1</span></div>
     <div class="stat-row"><span class="stat-label">KILLS</span><span class="stat-value" id="s-kills">0</span></div>
+    <div class="stat-row"><span class="stat-label">CRYSTALS</span><span class="stat-value" id="s-crystals" style="color:#67e8f9">0💎</span></div>
     <div class="stat-row"><span class="stat-label">TORCH</span><span class="stat-value" id="s-torch">3</span></div>
     <div class="stat-row"><span class="stat-label">POISON</span><span class="stat-value" id="s-poison">—</span></div>
     <div class="stat-row"><span class="stat-label">PASSIVE</span><span class="stat-value" id="passive-status">—</span></div>
@@ -1143,6 +1194,23 @@
   <div id="inventory-bar"></div>
 
   <div id="message-log"></div>
+</div>
+
+<!-- v4-01 Shop Modal -->
+<div id="shop-modal">
+  <div id="shop-modal-content">
+    <div id="shop-modal-header">
+      <span class="shop-title">🛒 Shop</span>
+      <span id="shop-crystals">💎 0</span>
+      <div id="shop-modal-close" role="button" aria-label="Close">×</div>
+    </div>
+    <div id="shop-tabs">
+      <button class="shop-tab active" data-tab="buy">Buy</button>
+      <button class="shop-tab" data-tab="sell">Sell</button>
+    </div>
+    <div id="shop-buy-list" class="shop-list"></div>
+    <div id="shop-sell-list" class="shop-list" style="display:none"></div>
+  </div>
 </div>
 
 <div id="title-screen">

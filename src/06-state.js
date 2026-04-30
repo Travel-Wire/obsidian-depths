@@ -92,6 +92,11 @@ function newState() {
     turns: 0,
     kills: 0,
     gold: 0,
+    // v4-01 — Drop economy
+    crystals: 0,           // currency for shops/services
+    crystalPiles: [],      // ground piles { x, y, amount }
+    shops: [],             // [{ x, y, used: bool, stock: [items], buybackStack: [items] }]
+    lastAnvilFloor: -10,   // floor index when last anvil spawned (cooldown)
     nextItemId: 0,
     nextEnemyId: 0,
     stairsPos: { x: 0, y: 0 },

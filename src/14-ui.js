@@ -42,6 +42,7 @@ function getUIRefs() {
   UI_REFS.sDef     = document.getElementById('s-def');
   UI_REFS.sFloor   = document.getElementById('s-floor');
   UI_REFS.sKills   = document.getElementById('s-kills');
+  UI_REFS.sCrystals = document.getElementById('s-crystals');
   UI_REFS.sTorch   = document.getElementById('s-torch');
   UI_REFS.sPoison  = document.getElementById('s-poison');
   UI_REFS.msgLog   = document.getElementById('message-log');
@@ -75,6 +76,7 @@ function updateUI() {
   if (R.sDef)    R.sDef.textContent = getPlayerDef();
   if (R.sFloor)  R.sFloor.textContent = state.floor;
   if (R.sKills)  R.sKills.textContent = state.kills;
+  if (R.sCrystals) R.sCrystals.textContent = `${state.crystals || 0}💎`;
   if (R.sTorch)  R.sTorch.textContent = `${CFG.TORCH_BRIGHT}/${effectiveDimRadius()}/${effectiveEdgeRadius()}`;
   if (R.sPoison) R.sPoison.textContent = p.poisoned > 0 ? `${p.poisoned}t` : '—';
 
@@ -222,6 +224,121 @@ function updateUI() {
       R._lastSkillsSig = sig;
     }
   }
+}
+
+// ─── v4-01 Shop Modal ──────────────────────────
+// Tier prices and basic 4-item stock + Health Potion. Sell @ 30% buy price.
+const SHOP_TIER_PRICE = { 0: 20, 1: 50, 2: 100, 3: 250, 4: 600 }; // COMMON..LEGENDARY
+const HEAL_POTION_PRICE = 30;
+
+function shopGenerateStock(floor) {
+  // 4 random items (mostly equippables, scaled to floor)
+  const stock = [];
+  for (let i = 0; i < 4; i++) {
+    const tier = (typeof pickItemTier === 'function') ? pickItemTier(floor || 1) : 0;
+    let baseDef = (typeof pickWeightedItem === 'function')
+      ? pickWeightedItem(floor || 1, d => d.slot && d.tierBase != null)
+      : null;
+    if (!baseDef) baseDef = (typeof ITEM_DEFS !== 'undefined') ? ITEM_DEFS[i % ITEM_DEFS.length] : null;
+    if (!baseDef) continue;
+    let inst = null;
+    if (tier === (typeof TIER !== 'undefined' ? TIER.LEGENDARY : 4)) {
+      const legDef = (typeof pickLegendaryDef === 'function') ? pickLegendaryDef(floor || 1) : null;
+      if (legDef) inst = makeLegendaryItem(legDef, {});
+    }
+    if (!inst) {
+      if (baseDef.slot && typeof makeTieredItem === 'function') inst = makeTieredItem(baseDef, tier, {});
+      else inst = makeItemInstance(baseDef, {});
+    }
+    if (inst) {
+      const t = inst.tier != null ? inst.tier : 0;
+      inst.shopPrice = SHOP_TIER_PRICE[t] || 30;
+      stock.push(inst);
+    }
+  }
+  // Always: Health Potion (find by id)
+  const hpDef = (typeof ITEM_DEFS !== 'undefined') ? ITEM_DEFS.find(d => d.id === 'health_potion') : null;
+  if (hpDef) {
+    const hp = makeItemInstance(hpDef, {});
+    hp.shopPrice = HEAL_POTION_PRICE;
+    stock.push(hp);
+  }
+  return stock;
+}
+
+let _shopActiveRef = null;
+
+function openShopModal(shop) {
+  if (!shop) return;
+  if (!shop.stock) shop.stock = shopGenerateStock(state.floor);
+  _shopActiveRef = shop;
+  state.choosingCard = true; // pause input
+  renderShopModal();
+  const m = document.getElementById('shop-modal');
+  if (m) m.classList.add('open');
+}
+
+function closeShopModal() {
+  state.choosingCard = false;
+  _shopActiveRef = null;
+  const m = document.getElementById('shop-modal');
+  if (m) m.classList.remove('open');
+}
+
+function renderShopModal() {
+  const buyEl = document.getElementById('shop-buy-list');
+  const sellEl = document.getElementById('shop-sell-list');
+  const cEl = document.getElementById('shop-crystals');
+  if (cEl) cEl.textContent = `💎 ${state.crystals || 0}`;
+  if (buyEl && _shopActiveRef) {
+    let html = '';
+    _shopActiveRef.stock.forEach((it, idx) => {
+      if (it.sold) return;
+      html += `<div class="shop-item" data-buy-idx="${idx}"><span class="emoji">${it.emoji || '?'}</span><span class="iname">${it.name}</span><span class="iprice">${it.shopPrice}💎</span></div>`;
+    });
+    if (html === '') html = '<div class="shop-empty">Sold out!</div>';
+    buyEl.innerHTML = html;
+  }
+  if (sellEl) {
+    let html = '';
+    state.inventory.forEach((it, idx) => {
+      const t = (typeof it.tier === 'number') ? it.tier : 0;
+      const sellPrice = Math.floor((SHOP_TIER_PRICE[t] || 30) * 0.3);
+      html += `<div class="shop-item" data-sell-idx="${idx}"><span class="emoji">${it.emoji || '?'}</span><span class="iname">${it.name}</span><span class="iprice">+${sellPrice}💎</span></div>`;
+    });
+    if (html === '') html = '<div class="shop-empty">Inventory empty.</div>';
+    sellEl.innerHTML = html;
+  }
+}
+
+function shopBuy(idx) {
+  if (!_shopActiveRef) return;
+  const it = _shopActiveRef.stock[idx];
+  if (!it || it.sold) return;
+  if ((state.crystals || 0) < it.shopPrice) {
+    addMessage('Not enough crystals.', 'info');
+    return;
+  }
+  if (state.inventory.length >= CFG.INV_SIZE) {
+    addMessage('Inventory full.', 'info');
+    return;
+  }
+  state.crystals -= it.shopPrice;
+  it.sold = true;
+  state.inventory.push(it);
+  addMessage(`Bought ${it.name} for ${it.shopPrice}💎.`, 'pickup');
+  renderShopModal();
+}
+
+function shopSell(idx) {
+  const it = state.inventory[idx];
+  if (!it) return;
+  const t = (typeof it.tier === 'number') ? it.tier : 0;
+  const price = Math.floor((SHOP_TIER_PRICE[t] || 30) * 0.3);
+  state.crystals = (state.crystals || 0) + price;
+  state.inventory.splice(idx, 1);
+  addMessage(`Sold ${it.name} for ${price}💎.`, 'pickup');
+  renderShopModal();
 }
 
 // ─── v3-03 Minimap (dual-mode) ─────────────────

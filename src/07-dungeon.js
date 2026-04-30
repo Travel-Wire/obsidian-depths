@@ -93,9 +93,10 @@ function generateDungeon(floor) {
   map[stairsPos.y][stairsPos.x] = TILE.STAIRS;
 
   // ─── ANVIL ─────────────────────────────────
+  // v4-01: rate-limited (3-floor cooldown after last spawn)
   const anvils = [];
-  if (floor >= 3 && Math.random() < 0.5 && rooms.length > 2) {
-    // pick a room different from player and stairs
+  const anvilCdOk = (floor - (state ? (state.lastAnvilFloor || -10) : -10)) >= (CFG.ANVIL_COOLDOWN_FLOORS || 3);
+  if (floor >= 3 && anvilCdOk && Math.random() < 0.3 && rooms.length > 2) {
     let attempts = 0;
     while (attempts < 20) {
       const idx = rand(1, rooms.length - 2);
@@ -107,6 +108,28 @@ function generateDungeon(floor) {
           !(ax === playerRoom.cx && ay === playerRoom.cy)) {
         map[ay][ax] = TILE.ANVIL;
         anvils.push({ x: ax, y: ay, used: false });
+        break;
+      }
+      attempts++;
+    }
+  }
+
+  // ─── SHOP (v4-01) ──────────────────────────
+  // Guaranteed every SHOP_FLOOR_INTERVAL floors (default 3): 3, 6, 9. Player room area excluded.
+  const shops = [];
+  if (rooms.length > 2 && (floor % (CFG.SHOP_FLOOR_INTERVAL || 3) === 0)) {
+    let attempts = 0;
+    while (attempts < 30) {
+      const idx = rand(1, rooms.length - 2);
+      const r = rooms[idx];
+      const sx = rand(r.x + 1, r.x + r.w - 2);
+      const sy = rand(r.y + 1, r.y + r.h - 2);
+      if (map[sy][sx] === TILE.FLOOR &&
+          !(sx === stairsPos.x && sy === stairsPos.y) &&
+          !(sx === playerRoom.cx && sy === playerRoom.cy) &&
+          !anvils.some(a => a.x === sx && a.y === sy)) {
+        map[sy][sx] = TILE.SHOP;
+        shops.push({ x: sx, y: sy, used: false, stock: null });
         break;
       }
       attempts++;
@@ -168,7 +191,7 @@ function generateDungeon(floor) {
     }
   }
 
-  return { map, explored, rooms, playerStart: { x: playerRoom.cx, y: playerRoom.cy }, stairsPos, torches, litSet, traps, anvils };
+  return { map, explored, rooms, playerStart: { x: playerRoom.cx, y: playerRoom.cy }, stairsPos, torches, litSet, traps, anvils, shops };
 }
 
 function digCorridor(map, x1, y1, x2, y2) {
@@ -285,12 +308,14 @@ function populateFloor(floor) {
     }
   }
 
-  // ─── ITEMS (per-room 2-3) — v3-02: tier-aware spawn ───
+  // ─── ITEMS — v4-01: drop rate cut ~70% (was 2-3 per room → 0-1 with 50% chance) ───
   // Boss room flag: F4/F6/F8/F10 — 1st item drop guaranteed min Rare (Epic at F8/F10)
   let bossDropPending = (floor === 4 || floor === 6 || floor === 8 || floor === 10);
   for (let i = 1; i < state.rooms.length; i++) {
     const room = state.rooms[i];
-    const numItems = rand(2, 3);
+    // v4-01: 50% rooms get 1 item, rest get 0. Boss-drop room always gets 1.
+    if (!bossDropPending && Math.random() > (CFG.ROOM_ITEM_CHANCE || 0.5)) continue;
+    const numItems = bossDropPending ? 1 : 1;
     for (let k = 0; k < numItems; k++) {
       const free = findFreeTileInRoom(room, [...enemies, ...items]);
       if (!free) continue;
@@ -378,6 +403,8 @@ function enterFloor(floor) {
   state.traps = dungeon.traps || [];
   state.litRooms = dungeon.litSet || new Set();
   state.anvils = dungeon.anvils || [];
+  state.shops = dungeon.shops || [];
+  if (state.anvils.length > 0) state.lastAnvilFloor = floor;
   state.webTiles = [];
   state.player.x = dungeon.playerStart.x;
   state.player.y = dungeon.playerStart.y;

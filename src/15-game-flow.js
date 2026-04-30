@@ -85,6 +85,23 @@ function tryMove(dx, dy) {
   const trap = state.traps.find(t => t.x === nx && t.y === ny && !t.triggered);
   if (trap) triggerTrap(trap);
 
+  // v4-01 — Shop tile auto-open
+  const shop = state.shops && state.shops.find(s => s.x === nx && s.y === ny);
+  if (shop && typeof openShopModal === 'function') openShopModal(shop);
+
+  // v4-01 — Crystal pile pickup (auto)
+  if (state.crystalPiles && state.crystalPiles.length > 0) {
+    for (let i = state.crystalPiles.length - 1; i >= 0; i--) {
+      const p = state.crystalPiles[i];
+      if (p.x === nx && p.y === ny) {
+        state.crystals = (state.crystals || 0) + p.amount;
+        spawnFloatingText(nx, ny, `+${p.amount}💎`, '#67e8f9');
+        addMessage(`Picked up ${p.amount} crystals.`, 'pickup');
+        state.crystalPiles.splice(i, 1);
+      }
+    }
+  }
+
   // PLAN 05 — Magnetic: auto-pickup in r3
   if (state.player.flags && state.player.flags.magnetic) {
     for (let i = state.groundItems.length - 1; i >= 0; i--) {

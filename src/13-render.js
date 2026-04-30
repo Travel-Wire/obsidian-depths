@@ -235,6 +235,19 @@ function render(time) {
         ctx.restore();
       }
 
+      // v4-01: SHOP tile
+      if (tile === TILE.SHOP && isVisible) {
+        ctx.save();
+        const pulse = 1 + Math.sin(time * 0.004) * 0.08;
+        ctx.shadowColor = '#67e8f9';
+        ctx.shadowBlur = 12;
+        ctx.font = `${(T - 4) * pulse}px ${EMOJI_FONT}`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('🛒', sx + T / 2, sy + T / 2 + 1);
+        ctx.restore();
+      }
+
       if (tile === TILE.DOOR_CLOSED) {
         ctx.save();
         ctx.shadowColor = '#fbbf24';

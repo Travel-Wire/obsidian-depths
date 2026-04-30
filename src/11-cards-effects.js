@@ -532,4 +532,13 @@ function onEnemyKilled(e) {
   }
   // v3-04 / v3-05: objective + boss-kill hook
   if (typeof objectivesOnEnemyKilled === 'function') objectivesOnEnemyKilled(e);
+
+  // v4-01 — Crystal drop economy
+  if (!e.isChild && !e.child && !e.allied && Math.random() < (CFG.CRYSTAL_DROP_CHANCE || 0.85)) {
+    const baseCrystals = rand(1, 3) + Math.floor((state.floor || 1) / 2);
+    const bossBonus = e.isBoss ? (60 + 8 * (state.floor || 1)) : 0;
+    const total = baseCrystals + bossBonus;
+    state.crystals = (state.crystals || 0) + total;
+    spawnFloatingText(e.x, e.y, `+${total}💎`, '#67e8f9');
+  }
 }

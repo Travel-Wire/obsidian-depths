@@ -38,6 +38,12 @@ const CFG = {
   ROOM_MAX_H: 9,
   INV_SIZE: 10,
   MSG_MAX: 5,
+  // v4-01 — Drop economy
+  ROOM_ITEM_CHANCE: 0.5,        // chance an item spawns in a non-start room (was implicitly 1.0)
+  CRYSTAL_DROP_CHANCE: 0.85,    // % of enemy kills that drop crystals
+  CRYSTAL_PILE_CHANCE: 0.05,    // 5% rooms get a crystal pile on floor
+  SHOP_FLOOR_INTERVAL: 3,       // shop spawns every N floors (guaranteed)
+  ANVIL_COOLDOWN_FLOORS: 3,     // anvil rate-limit
 };
 
 // ─── TURN ENGINE CONSTANTS ───────────────────────
@@ -52,7 +58,7 @@ const STATUS = {
   WEB: 'WEB', BLEED: 'BLEED', DRAIN_XP: 'DRAIN_XP',
 };
 
-const TILE = { WALL: 0, FLOOR: 1, STAIRS: 2, CORRIDOR: 3, ANVIL: 4, DOOR_CLOSED: 5, DOOR_OPEN: 6 };
+const TILE = { WALL: 0, FLOOR: 1, STAIRS: 2, CORRIDOR: 3, ANVIL: 4, DOOR_CLOSED: 5, DOOR_OPEN: 6, SHOP: 7 };
 
 const EMOJI_FONT = `'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif`;
 

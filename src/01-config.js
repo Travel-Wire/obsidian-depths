@@ -15,7 +15,17 @@ const CFG = {
   TILE: 28,
   MAX_FLOOR: 10,
   FOV_RADIUS: 9, // legacy fallback (unused)
-  TORCH_RADIUS: 6,
+  // ─── 4-layer visibility (v3-01) ─────────────
+  // BRIGHT: full color, max immersion. Doesn't grow with Sharp Eyes.
+  // DIM:    desaturated mid-zone (the "main" reveal radius).
+  // EDGE:   silhouette zone (sylwetki, no color).
+  // TORCH_MAX: hard cap on EDGE after all bonuses (Sharp Eyes + Candle).
+  TORCH_BRIGHT: 2,
+  TORCH_DIM: 5,
+  TORCH_EDGE: 8,
+  TORCH_MAX: 12,
+  // Legacy alias — kept so pre-v3 code paths (UI, etc.) still resolve.
+  TORCH_RADIUS: 5,
   TORCH_RADIUS_MAX: 9,
   LIT_ROOM_CHANCE: 0.20,
   LIT_ROOM_MIN_PER_FLOOR: 1,

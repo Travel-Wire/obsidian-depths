@@ -150,10 +150,80 @@
     position: absolute;
     top: 16px; right: 16px;
     background: rgba(8, 8, 16, 0.85);
-    border: 1px solid rgba(255, 180, 60, 0.15);
+    border: 1px solid rgba(255, 180, 60, 0.25);
     border-radius: 12px;
     padding: 10px;
-    backdrop-filter: blur(8px);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    pointer-events: auto;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  #minimap-container:hover { transform: scale(1.02); box-shadow: 0 6px 28px rgba(255,180,60,0.15); }
+  #minimap-container:active { transform: scale(0.98); }
+
+  /* ─── v3-03: Minimap modal (fullscreen expanded) ─── */
+  #minimap-modal {
+    position: fixed; inset: 0;
+    z-index: 95;
+    display: none;
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    align-items: center; justify-content: center;
+    pointer-events: auto;
+  }
+  #minimap-modal.open { display: flex; }
+  #minimap-modal-content {
+    width: 92vw; height: 92vh; max-width: 1200px;
+    background: rgba(12, 12, 22, 0.95);
+    border: 1px solid rgba(255,180,60,0.3);
+    border-radius: 16px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    pointer-events: auto;
+  }
+  #minimap-modal-header {
+    display: flex; justify-content: space-between; align-items: center;
+    width: 100%;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: #cbd5e1;
+  }
+  #minimap-modal-close {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,180,60,0.4);
+    color: #fbbf24;
+    width: 36px; height: 36px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    font-size: 18px;
+    pointer-events: auto;
+  }
+  #minimap-modal-close:hover { background: rgba(255,180,60,0.2); }
+  #minimap-modal-canvas {
+    background: #05050a;
+    border: 1px solid rgba(255,180,60,0.15);
+    border-radius: 8px;
+    image-rendering: pixelated;
+  }
+  #minimap-modal-legend {
+    display: flex; flex-wrap: wrap; gap: 10px 16px;
+    justify-content: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: #94a3b8;
+    padding: 4px 8px;
+  }
+  #minimap-modal-legend span b { color: #fbbf24; font-weight: 700; }
+  #minimap-hint {
+    font-size: 10px; color: #52525b;
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 1px;
   }
 
   #minimap-label {
@@ -404,13 +474,22 @@
   /* ─── MOBILE RESPONSIVE ─── */
   @media (max-width: 768px) {
     #touch-controls { display: block; }
-    #minimap-container { display: none; }
+    /* v3-03: minimap NOW visible on mobile (compact), tap to expand. */
+    #minimap-container {
+      display: block;
+      top: env(safe-area-inset-top, 6px);
+      right: 8px;
+      padding: 4px;
+      border-radius: 8px;
+    }
+    #minimap-container canvas { width: 80px; height: 55px; display: block; }
+    #minimap-label { display: none; }
     #inventory-bar { display: none; }
     #message-log { display: none; }
 
     #stats-panel {
       top: env(safe-area-inset-top, 6px);
-      left: 6px; right: 6px;
+      left: 6px; right: 96px; /* v3-03: leave room for minimap top-right */
       padding: 6px 10px;
       min-width: unset;
       border-radius: 10px;
@@ -419,6 +498,8 @@
       align-items: center;
       gap: 0 10px;
     }
+    #minimap-modal-content { padding: 8px; gap: 6px; }
+    #minimap-modal-legend { font-size: 9px; gap: 6px 10px; }
     .stat-title { display: none; }
     .hp-bar-container { width: 100%; height: 12px; margin-bottom: 2px; }
     .hp-bar-text { font-size: 8px; }
@@ -866,9 +947,30 @@
     <div id="active-skills-row"></div>
   </div>
 
-  <div id="minimap-container">
+  <div id="minimap-container" title="Click or tap to expand (M)">
     <div id="minimap-label">MAP</div>
-    <canvas id="minimap" width="120" height="80"></canvas>
+    <canvas id="minimap" width="160" height="110"></canvas>
+  </div>
+
+  <div id="minimap-modal">
+    <div id="minimap-modal-content">
+      <div id="minimap-modal-header">
+        <span>Floor <b id="mm-floor">1</b> · Map</span>
+        <span id="minimap-hint">Tap outside · M / Esc / × to close</span>
+        <div id="minimap-modal-close" role="button" aria-label="Close">×</div>
+      </div>
+      <canvas id="minimap-modal-canvas" width="800" height="550"></canvas>
+      <div id="minimap-modal-legend">
+        <span><b>●</b> You</span>
+        <span><b style="color:#fbbf24">▼</b> Stairs</span>
+        <span><b style="color:#f97316">⚒</b> Anvil</span>
+        <span><b style="color:#facc15">+</b> Door</span>
+        <span><b style="color:#ef4444">!</b> Trap</span>
+        <span><b style="color:#22d3ee">◆</b> Item</span>
+        <span><b style="color:#ef4444">◉</b> Enemy</span>
+        <span><b style="color:#a855f7">👑</b> Boss</span>
+      </div>
+    </div>
   </div>
 
   <div id="equipment-bar"></div>

@@ -342,19 +342,56 @@ function enterFloor(floor) {
   state.camera.x = state.player.x;
   state.camera.y = state.player.y;
 
+  // ─── v3-01: per-floor visibility/exploration buffers ───
+  const W = CFG.MAP_W, H = CFG.MAP_H;
+  state.tileLightLevel = new Float32Array(W * H);
+  state.exploredCorridors = new Uint8Array(W * H);
+  state.exploredRooms = new Set();
+
+  // ─── perf P2.4: roomGrid Uint8Array, value = roomIdx+1 (0 = none) ───
+  // Cap rooms to 254 (Uint8 limit minus the 0-sentinel) — far above the 14-room max.
+  state.roomGrid = new Uint8Array(W * H);
+  for (let i = 0; i < state.rooms.length && i < 254; i++) {
+    const r = state.rooms[i];
+    for (let dy = 0; dy < r.h; dy++) {
+      for (let dx = 0; dx < r.w; dx++) {
+        const xx = r.x + dx, yy = r.y + dy;
+        if (xx >= 0 && xx < W && yy >= 0 && yy < H) {
+          state.roomGrid[yy * W + xx] = i + 1;
+        }
+      }
+    }
+  }
+
   const pop = populateFloor(floor);
   state.enemies = pop.enemies;
   state.groundItems = pop.items;
   state.visible = computePlayerFOV();
   markExplored();
+
+  // Force re-render & minimap rebuild.
+  state.dirty = true;
+  state.minimapDirty = true;
+  state.minimapExpanded = false;
 }
 
 function markExplored() {
+  const W = CFG.MAP_W;
   for (const k of state.visible) {
     const [x, y] = k.split(',').map(Number);
-    if (y >= 0 && y < CFG.MAP_H && x >= 0 && x < CFG.MAP_W) {
+    if (y >= 0 && y < CFG.MAP_H && x >= 0 && x < W) {
       state.explored[y][x] = 1;
+      // v3-01: corridor "trail" memory — brighter render when out of FOV.
+      const t = state.map[y][x];
+      if (t === TILE.CORRIDOR || t === TILE.DOOR_OPEN || t === TILE.DOOR_CLOSED) {
+        if (state.exploredCorridors) state.exploredCorridors[y * W + x] = 1;
+      }
     }
+  }
+  // v3-01: mark current room as explored (room contour memory).
+  if (state.roomGrid) {
+    const idx = state.roomGrid[state.player.y * W + state.player.x] - 1;
+    if (idx >= 0) state.exploredRooms.add(idx);
   }
   // Reveal traps in current FOV
   if (state.traps) {

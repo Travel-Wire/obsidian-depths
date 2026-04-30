@@ -16,7 +16,10 @@ function triggerTrap(trap) {
     addMessage(trap.msg.replace('{dmg}', dmg), 'combat');
   } else if (trap.type === 'pit') {
     if (state.floor < CFG.MAX_FLOOR) {
+      // P1.2 (sprint): explicit warning so the silent floor descent isn't a frustration trap.
+      addMessage('WARNING: You triggered a pit trap!', 'combat');
       addMessage(`${trap.msg} You fall to floor ${state.floor + 1}!`, 'descend');
+      spawnParticles(state.player.x, state.player.y, 18, '#1e1b18', 2.0, 25);
       state.floor++;
       enterFloor(state.floor);
       return;

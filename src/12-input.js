@@ -73,10 +73,60 @@ document.addEventListener('keydown', (e) => {
     return;
   }
 
+  // v3-03: 'M' or 'Escape' toggles minimap expanded modal (desktop hotkey).
+  if (e.key === 'm' || e.key === 'M') {
+    e.preventDefault();
+    if (typeof toggleMinimapExpanded === 'function') toggleMinimapExpanded();
+    return;
+  }
+  if (e.key === 'Escape' && state && state.minimapExpanded) {
+    e.preventDefault();
+    if (typeof closeMinimapExpanded === 'function') closeMinimapExpanded();
+    return;
+  }
+
   if (e.key === '0') { useItem(9); return; }
   const num = parseInt(e.key);
   if (num >= 1 && num <= 9) { useItem(num - 1); return; }
 });
+
+// ─── v3-03: Minimap tap/click to expand, modal close handlers ───
+{
+  const mmContainer = document.getElementById('minimap-container');
+  const mmModal = document.getElementById('minimap-modal');
+  const mmClose = document.getElementById('minimap-modal-close');
+
+  const open = () => {
+    if (gamePhase !== 'playing' || !state) return;
+    if (!state.minimapExpanded && typeof toggleMinimapExpanded === 'function') {
+      // Update floor label.
+      const fEl = document.getElementById('mm-floor');
+      if (fEl) fEl.textContent = state.floor;
+      toggleMinimapExpanded();
+    }
+  };
+  const close = () => {
+    if (typeof closeMinimapExpanded === 'function') closeMinimapExpanded();
+  };
+
+  if (mmContainer) {
+    mmContainer.addEventListener('click', open);
+    mmContainer.addEventListener('touchstart', (e) => { e.preventDefault(); open(); }, { passive: false });
+  }
+  if (mmClose) {
+    mmClose.addEventListener('click', (e) => { e.stopPropagation(); close(); });
+    mmClose.addEventListener('touchstart', (e) => { e.preventDefault(); e.stopPropagation(); close(); }, { passive: false });
+  }
+  if (mmModal) {
+    // Tap on backdrop (not on content) closes; MVP cut: no pinch zoom — tap-to-close.
+    mmModal.addEventListener('click', (e) => {
+      if (e.target === mmModal) close();
+    });
+    mmModal.addEventListener('touchstart', (e) => {
+      if (e.target === mmModal) { e.preventDefault(); close(); }
+    }, { passive: false });
+  }
+}
 
 // PLAN 05 — wire modal action buttons (script runs at end of body — DOM already parsed)
 {

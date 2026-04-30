@@ -47,10 +47,32 @@ function resize() {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 }
 
+// ─── Render-on-dirty (P1.3) ───
+// We always tick the rAF loop (animations + camera + particles still need it),
+// but skip the heavy world draw when nothing relevant changed AND there are no
+// active animations / particles / shake / camera lerp pending.
+function shouldRedraw() {
+  if (state.dirty) return true;
+  if (state.animations && state.animations.length) return true;
+  if (state.particles && state.particles.length) return true;
+  if (state.floatingTexts && state.floatingTexts.length) return true;
+  if (state.tornadoes && state.tornadoes.length) return true;
+  if (state.webTiles && state.webTiles.length) return true;
+  if (state.screenShake > 0.5) return true;
+  // NOTE: torch flicker pauses while idle — acceptable for the perf win.
+  // Camera still settling toward player?
+  if (Math.abs(state.camera.x - state.player.x) > 0.01) return true;
+  if (Math.abs(state.camera.y - state.player.y) > 0.01) return true;
+  return false;
+}
+
 function render(time) {
   requestAnimationFrame(render);
   if (gamePhase === 'title') { renderTitleBG(time); return; }
   if (gamePhase !== 'playing' && gamePhase !== 'dead' && gamePhase !== 'won') return;
+  if (!state) return;
+  if (!shouldRedraw()) return;
+  state.dirty = false;
 
   const T = CFG.TILE;
   const cw = window.innerWidth, ch = window.innerHeight;
@@ -78,13 +100,17 @@ function render(time) {
   const endTX = Math.min(CFG.MAP_W, startTX + Math.ceil(cw / T) + 3);
   const endTY = Math.min(CFG.MAP_H, startTY + Math.ceil(ch / T) + 3);
 
-  // --- Terrain ---
+  // --- Terrain (v3-01: 4-layer gradient + corridor-trail memory) ---
+  const W = CFG.MAP_W;
+  const tll = state.tileLightLevel; // Float32Array, may be null on first frame
   for (let ty = startTY; ty < endTY; ty++) {
     for (let tx = startTX; tx < endTX; tx++) {
       const sx = tx * T + offsetX;
       const sy = ty * T + offsetY;
       const tile = state.map[ty][tx];
-      const isVisible = state.visible.has(key(tx, ty));
+      const tileIdx = ty * W + tx;
+      const lightLevel = tll ? tll[tileIdx] : 0;
+      const isVisible = lightLevel > 0;
       const isExplored = state.explored[ty][tx];
 
       if (!isExplored) continue;
@@ -100,7 +126,6 @@ function render(time) {
       } else if (tile === TILE.CORRIDOR) {
         baseColor = colorVariant(COLORS.corridorBase, tx, ty, state.seed, 4);
       } else if (tile === TILE.DOOR_CLOSED || tile === TILE.DOOR_OPEN) {
-        // Door pad — dark wood-toned base, brighter than floor.
         baseColor = [40, 28, 14];
       } else if (tileInLitRoom) {
         baseColor = colorVariant(COLORS.litRoomFloor, tx, ty, state.seed, 6);
@@ -108,44 +133,63 @@ function render(time) {
         baseColor = colorVariant(COLORS.floorBase, tx, ty, state.seed, 5);
       }
 
-      const playerRoom = getRoomAt(state.player.x, state.player.y);
-      const playerInLit = playerRoom && playerRoom.lit;
-      const tr = effectiveTorchRadius();
-
-      let lightMult = 0;
-      if (isVisible) {
-        const pd = dist(tx, ty, state.player.x, state.player.y);
-        if (playerInLit && tileRoom === playerRoom) {
-          lightMult = Math.max(0.55, 1 - (pd / 20) * 0.3);
+      // ── 4-layer multiplier ──
+      // BRIGHT lvl≥0.85 → 1.0  (full color)
+      // DIM    0.45-0.85 → 0.65 (desat 60-70%)
+      // EDGE   0.15-0.45 → 0.35 (silhouette / sepia)
+      // FOG     <0.15:    explored-only memory; corridors brighter (trail).
+      let lightMult, desat = 0;
+      if (lightLevel >= 0.85) {
+        lightMult = 1.0;
+      } else if (lightLevel >= 0.45) {
+        lightMult = 0.65;
+        desat = 0.35;
+      } else if (lightLevel >= 0.15) {
+        lightMult = 0.35;
+        desat = 0.7;  // sepia / sylwetka strefa
+      } else {
+        // explored-only memory tint
+        if (tile === TILE.CORRIDOR || tile === TILE.DOOR_OPEN || tile === TILE.DOOR_CLOSED) {
+          // v3-01: corridor "trail" — stronger than the old 0.25 because the
+          // corridor was actually walked, not just glanced.
+          const onTrail = state.exploredCorridors && state.exploredCorridors[tileIdx];
+          lightMult = onTrail ? 0.4 : 0.25;
         } else {
-          lightMult = Math.max(0, 1 - (pd / (tr + 1)) ** 1.5) * 0.6;
+          // Room contour memory: if the player has been in this room before but
+          // is far away now, walls render slightly brighter (so the player "knows
+          // the shape" even when standing on another floor segment).
+          const roomIdx = state.roomGrid ? state.roomGrid[tileIdx] - 1 : -1;
+          const roomMemory = (roomIdx >= 0 && state.exploredRooms && state.exploredRooms.has(roomIdx));
+          lightMult = (roomMemory && tile === TILE.WALL) ? 0.3 : 0.12;
         }
+        desat = 0.85;
+      }
 
+      // Add a torch-glow boost when in FOV.
+      if (isVisible) {
         for (const torch of state.torches) {
           const td = dist(tx, ty, torch.x, torch.y);
           if (td < 6) {
             const flicker = 0.85 + Math.sin(time * 0.005 + torch.phase) * 0.15;
             const tLight = Math.max(0, 1 - (td / 6) ** 1.3) * 0.7 * flicker;
             lightMult = Math.min(1, lightMult + tLight);
+            // boosted tiles re-saturate a bit
+            desat = Math.max(0, desat - tLight);
           }
-        }
-
-        lightMult = clamp(lightMult, 0.15, 1);
-      } else {
-        // Explored-but-not-currently-visible. Corridors and doors stay
-        // brighter so the player can read the dungeon layout / paths even
-        // outside torch range. Other tiles use the original "fog" tint.
-        if (tile === TILE.CORRIDOR || tile === TILE.DOOR_CLOSED || tile === TILE.DOOR_OPEN) {
-          lightMult = 0.25;
-        } else {
-          lightMult = 0.08;
         }
       }
 
-      const r = Math.floor(baseColor[0] * lightMult);
-      const g = Math.floor(baseColor[1] * lightMult);
-      const b = Math.floor(baseColor[2] * lightMult);
-      ctx.fillStyle = `rgb(${r},${g},${b})`;
+      // Apply lightMult + desaturation (toward grey).
+      let r = baseColor[0] * lightMult;
+      let g = baseColor[1] * lightMult;
+      let b = baseColor[2] * lightMult;
+      if (desat > 0) {
+        const grey = (r + g + b) / 3;
+        r = r * (1 - desat) + grey * desat;
+        g = g * (1 - desat) + grey * desat;
+        b = b * (1 - desat) + grey * desat;
+      }
+      ctx.fillStyle = `rgb(${Math.floor(r)},${Math.floor(g)},${Math.floor(b)})`;
       ctx.fillRect(sx, sy, T, T);
 
       if (tile === TILE.WALL && isVisible) {
@@ -319,6 +363,13 @@ function render(time) {
     if (e.vanished) continue; // ghost vanished — don't render
     if (!state.visible.has(key(e.x, e.y))) continue;
 
+    // v3-01: silhouette in EDGE zone (lightLevel < 0.45). Mimic DISGUISED skipped
+    // entirely in EDGE so player must approach to see "📦" — keeps the trick.
+    const eIdx = e.y * CFG.MAP_W + e.x;
+    const eLight = state.tileLightLevel ? state.tileLightLevel[eIdx] : 1;
+    const inEdge = eLight < 0.45;
+    if (inEdge && e.state === 'DISGUISED') continue;
+
     let ex = e.x, ey = e.y;
     const anim = state.animations.find(a => a.entity === e);
     if (anim) {
@@ -332,12 +383,14 @@ function render(time) {
 
     ctx.save();
     ctx.shadowColor = e.color || '#ef4444';
-    ctx.shadowBlur = 6;
+    ctx.shadowBlur = inEdge ? 3 : 6;
     if (e.state === 'HIDDEN') ctx.globalAlpha = 0.35;
+    else if (inEdge) ctx.globalAlpha = 0.45; // edge sylwetka
     ctx.font = `${T - 2}px ${EMOJI_FONT}`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     const renderEmoji = (e.state === 'DISGUISED' && e.disguise) ? e.disguise : (e.emoji || e.ch || '?');
+    if (inEdge) ctx.filter = 'brightness(0.55) contrast(1.4) grayscale(0.4)';
     ctx.fillText(renderEmoji, sx, sy + 1);
     ctx.restore();
 
@@ -460,7 +513,12 @@ function render(time) {
 
   // --- Update UI ---
   updateUI();
-  if (!isMobile) renderMinimap();
+  // v3-03 + perf: render-on-dirty minimap (mobile + desktop, both compact).
+  if (state.minimapDirty || state.minimapExpanded) {
+    renderMinimap(false);
+    if (state.minimapExpanded) renderMinimap(true);
+    state.minimapDirty = false;
+  }
   if (isMobile) updateMobileUI();
 }
 

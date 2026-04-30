@@ -61,6 +61,16 @@ function tryMove(dx, dy) {
     return;
   }
 
+  // P1.2: warn one step early on a *revealed* pit trap so player isn't surprised.
+  const aheadTrap = state.traps.find(t => t.x === nx && t.y === ny && !t.triggered && t.revealed && t.type === 'pit');
+  if (aheadTrap && !aheadTrap.warned) {
+    aheadTrap.warned = true;
+    addMessage('WARNING: pit trap ahead!', 'combat');
+    state.player.energy -= ACTION_COST.WAIT;
+    processWorld();
+    return;
+  }
+
   const oldX = state.player.x, oldY = state.player.y;
   state.player.x = nx;
   state.player.y = ny;
@@ -350,6 +360,10 @@ function processWorld() {
   state.visible = computePlayerFOV();
   markExplored();
   state.enemies = state.enemies.filter(e => e.hp > 0);
+
+  // Perf P1.3 + v3-03: invalidate render & minimap after every world tick.
+  state.dirty = true;
+  state.minimapDirty = true;
 }
 
 // Wait-action alias (kept for keybinding compatibility)

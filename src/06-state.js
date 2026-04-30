@@ -89,6 +89,20 @@ function newState() {
     camera: { x: 0, y: 0 },
     screenShake: 0,
     seed: Math.floor(Math.random() * 999999),
+
+    // ─── v3-01 visibility / v3-03 minimap / perf flags ───
+    // tileLightLevel — Float32Array(W*H), recomputed each turn from FOV layers (BRIGHT/DIM/EDGE).
+    // Source-of-truth for renderer; state.visible kept as a Set for AI/LOS compat.
+    tileLightLevel: null,
+    exploredCorridors: null, // Uint8Array(W*H), persistent per floor
+    exploredRooms: new Set(),
+    // Perf P2.4: roomGrid[y*MAP_W+x] = (roomIndex+1) so 0 = "no room". O(1) lookup.
+    roomGrid: null,
+    // Perf P1.3: render-on-dirty.
+    dirty: true,
+    // Minimap dual-mode (v3-03): compact + tap-expand modal.
+    minimapDirty: true,
+    minimapExpanded: false,
   };
 }
 
@@ -358,4 +372,7 @@ function equipStartingGear() {
 function addMessage(text, type = 'info') {
   state.messages.unshift({ text, type, age: 0 });
   if (state.messages.length > CFG.MSG_MAX) state.messages.pop();
+  // Render-on-dirty: any new message should refresh UI (cheap path because most
+  // hot UI work is sig-cached anyway).
+  state.dirty = true;
 }

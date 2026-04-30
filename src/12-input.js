@@ -13,17 +13,48 @@ const KEY_MAP = {
 document.addEventListener('keydown', (e) => {
   if (gamePhase === 'title' && (e.key === 'Enter' || e.key === ' ')) {
     e.preventDefault();
-    gamePhase = 'playing';
-    document.getElementById('title-screen').classList.add('hidden');
-    initGame();
+    // v3-06 — title → character select (not directly to playing).
+    if (typeof showCharacterSelect === 'function') {
+      showCharacterSelect();
+    } else {
+      gamePhase = 'playing';
+      document.getElementById('title-screen').classList.add('hidden');
+      initGame();
+    }
+    return;
+  }
+
+  // v3-06 — character select keyboard nav: 1-6 select, Enter confirm, Escape back.
+  if (gamePhase === 'character_select') {
+    const num = parseInt(e.key);
+    if (num >= 1 && num <= 6) {
+      e.preventDefault();
+      if (typeof selectCharacterByIndex === 'function') selectCharacterByIndex(num - 1);
+      return;
+    }
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (typeof confirmCharacterSelect === 'function') confirmCharacterSelect();
+      return;
+    }
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      if (typeof backToTitle === 'function') backToTitle();
+      return;
+    }
     return;
   }
 
   if ((gamePhase === 'dead' || gamePhase === 'won') && e.key === 'Enter') {
     document.getElementById('death-screen').classList.remove('show');
     document.getElementById('win-screen').classList.remove('show');
-    gamePhase = 'playing';
-    initGame();
+    // v3-06 — return to character select after death/win (not directly to game).
+    if (typeof showCharacterSelect === 'function') {
+      showCharacterSelect();
+    } else {
+      gamePhase = 'playing';
+      initGame();
+    }
     return;
   }
 
@@ -192,15 +223,24 @@ document.getElementById('equipment-bar').addEventListener('click', (e) => {
 function handleScreenTap(e) {
   if (gamePhase === 'title') {
     e.preventDefault();
-    gamePhase = 'playing';
-    document.getElementById('title-screen').classList.add('hidden');
-    initGame();
+    // v3-06 — title tap → character select (mobile).
+    if (typeof showCharacterSelect === 'function') {
+      showCharacterSelect();
+    } else {
+      gamePhase = 'playing';
+      document.getElementById('title-screen').classList.add('hidden');
+      initGame();
+    }
   } else if (gamePhase === 'dead' || gamePhase === 'won') {
     e.preventDefault();
     document.getElementById('death-screen').classList.remove('show');
     document.getElementById('win-screen').classList.remove('show');
-    gamePhase = 'playing';
-    initGame();
+    if (typeof showCharacterSelect === 'function') {
+      showCharacterSelect();
+    } else {
+      gamePhase = 'playing';
+      initGame();
+    }
   }
 }
 document.getElementById('title-screen').addEventListener('touchstart', handleScreenTap, { passive: false });

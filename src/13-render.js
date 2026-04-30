@@ -50,6 +50,8 @@ function resize() {
 function render(time) {
   requestAnimationFrame(render);
   if (gamePhase === 'title') { renderTitleBG(time); return; }
+  // v3-06 — character select uses DOM modal; canvas keeps its title backdrop.
+  if (gamePhase === 'character_select') { renderTitleBG(time); return; }
   if (gamePhase !== 'playing' && gamePhase !== 'dead' && gamePhase !== 'won') return;
 
   const T = CFG.TILE;

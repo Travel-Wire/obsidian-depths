@@ -6,11 +6,25 @@
 // ─── GAME LOGIC ─────────────────────────────────
 function initGame() {
   state = newState();
-  equipStartingGear();
+  // v3-06 — load persisted meta (per-class run stats, unlocks)
+  if (typeof loadMeta === 'function') state.meta = loadMeta();
+  // v3-06 — apply selected character (overrides stats/equipment/cards). Falls back to 'knight'.
+  const charKey = (typeof selectedCharacterKey !== 'undefined' && selectedCharacterKey) ? selectedCharacterKey : 'knight';
+  if (typeof applyCharacter === 'function') {
+    applyCharacter(state.player, charKey);
+  } else {
+    equipStartingGear();
+  }
   recomputeStats(); // PLAN 05 — initial baseline
   enterFloor(1);
-  addMessage('You descend into the Obsidian Depths...', 'descend');
-  addMessage('You start with a Rusty Dagger 🗡️ and Tattered Robes 🥋.', 'info');
+  // v3-06 — character opening line + class banner
+  const charDef = (typeof findCharacterDef === 'function') ? findCharacterDef(state.player.classKey) : null;
+  if (charDef) {
+    addMessage(`${charDef.emoji} ${charDef.fullName} descends into the Obsidian Depths...`, 'descend');
+    if (charDef.openingLine) addMessage(charDef.openingLine, 'info');
+  } else {
+    addMessage('You descend into the Obsidian Depths...', 'descend');
+  }
 }
 
 function tryMove(dx, dy) {
@@ -174,12 +188,15 @@ function useItem(slot) {
     spawnParticles(state.player.x, state.player.y, 12, '#34d399', 2, 25);
   } else if (item.effect === 'fireball') {
     addMessage(`The scroll erupts in flames!`, 'combat');
+    // v3-06 — Mage Arcane Affinity: scrolls deal +50% effect.
+    const scrollMult = (typeof getScrollMultiplier === 'function') ? getScrollMultiplier() : 1;
     state.enemies.forEach(e => {
       if (e.hp > 0 && state.visible.has(key(e.x, e.y))) {
         const d = dist(state.player.x, state.player.y, e.x, e.y);
         if (d <= 5) {
           if (e.vanished) return;
-          const dmg = Math.max(1, item.value - Math.floor(d));
+          const baseDmg = Math.max(1, item.value - Math.floor(d));
+          const dmg = Math.max(1, Math.floor(baseDmg * scrollMult));
           e.hp -= dmg;
           spawnParticles(e.x, e.y, 12, '#f97316', 3, 25);
           spawnFloatingText(e.x, e.y, `-${dmg}`, '#f97316');
@@ -226,12 +243,14 @@ function descendStairs() {
 
   if (state.floor >= CFG.MAX_FLOOR) {
     gamePhase = 'won';
+    if (typeof recordBestFloor === 'function') recordBestFloor();
     showWinScreen();
     return;
   }
 
   state.floor++;
   enterFloor(state.floor);
+  if (typeof recordBestFloor === 'function') recordBestFloor();
   addMessage(`You descend to floor ${state.floor}...`, 'descend');
 }
 
@@ -243,6 +262,8 @@ function processWorld() {
   // PLAN 05 — card per-turn ticks BEFORE enemy actions (fire aura, ice aura, regen, tornado, allies, sprinter)
   processCardTicks();
   tickActiveCooldowns();
+  // v3-06 — class passive world-tick (Resolve cooldown/duration, Bloodthirst chain timeout)
+  if (typeof processPassive === 'function') processPassive('worldTick');
 
   // Energy charge
   let pSpeed = getEffectiveSpeed(state.player);

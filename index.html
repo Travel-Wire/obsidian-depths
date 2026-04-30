@@ -171,12 +171,64 @@
     bottom: 80px; left: 50%;
     transform: translateX(-50%);
     display: flex;
+    flex-wrap: wrap;
     gap: 6px;
+    max-width: 460px;
     background: rgba(8, 8, 16, 0.85);
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 12px;
     padding: 8px 12px;
     backdrop-filter: blur(8px);
+    justify-content: center;
+  }
+
+  #equipment-bar {
+    position: absolute;
+    bottom: 140px; left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 6px;
+    background: rgba(8, 8, 16, 0.85);
+    border: 1px solid rgba(180, 120, 60, 0.25);
+    border-radius: 12px;
+    padding: 6px 10px;
+    backdrop-filter: blur(8px);
+  }
+
+  .equip-slot {
+    width: 38px; height: 38px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,180,60,0.25);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    font-size: 22px;
+    line-height: 1;
+  }
+  .equip-slot.empty { opacity: 0.35; }
+  .equip-slot.broken .emoji { filter: grayscale(1); opacity: 0.4; }
+  .equip-slot .slot-label {
+    position: absolute;
+    top: -10px; left: 50%;
+    transform: translateX(-50%);
+    font-size: 7px;
+    color: #71717a;
+    font-family: 'JetBrains Mono', monospace;
+    text-transform: uppercase;
+  }
+  .equip-slot .dur-bar {
+    position: absolute;
+    bottom: 2px; left: 3px; right: 3px;
+    height: 2px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 1px;
+    overflow: hidden;
+  }
+  .equip-slot .dur-bar .dur-fill {
+    height: 100%;
+    transition: width 0.2s;
   }
 
   .inv-slot {
@@ -198,6 +250,26 @@
     font-size: 8px;
     color: #525252;
     font-weight: 700;
+  }
+
+  .inv-slot .emoji {
+    font-size: 22px;
+    line-height: 1;
+  }
+
+  .inv-slot.broken .emoji { filter: grayscale(1); opacity: 0.5; }
+
+  .inv-slot .dur-bar {
+    position: absolute;
+    bottom: 2px; left: 3px; right: 3px;
+    height: 2px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 1px;
+    overflow: hidden;
+  }
+  .inv-slot .dur-bar .dur-fill {
+    height: 100%;
+    transition: width 0.2s;
   }
 
   .inv-slot.has-item { border-color: rgba(255, 180, 60, 0.3); }
@@ -490,6 +562,283 @@
     -webkit-text-fill-color: transparent;
     margin-bottom: 30px;
   }
+
+  /* ─── CARD MODAL ─── */
+  #card-modal {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    z-index: 200;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(5, 5, 12, 0.85);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    pointer-events: auto;
+  }
+  #card-modal.hidden { display: none; }
+
+  .card-modal-content {
+    width: 92vw;
+    max-width: 1100px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 18px;
+    padding: 24px;
+    animation: cardModalIn 0.4s ease-out;
+  }
+  @keyframes cardModalIn {
+    from { opacity: 0; transform: translateY(40px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .card-modal-title {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: 6px;
+    text-transform: uppercase;
+    background: linear-gradient(135deg, #fbbf24, #f59e0b, #f87171);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .card-modal-counter {
+    font-size: 11px;
+    letter-spacing: 3px;
+    color: #71717a;
+    text-transform: uppercase;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .card-row {
+    display: flex;
+    gap: 18px;
+    justify-content: center;
+    flex-wrap: wrap;
+    width: 100%;
+  }
+
+  .card-choice {
+    width: 240px;
+    height: 360px;
+    background: rgba(12, 12, 22, 0.95);
+    border: 2px solid #6b7280;
+    border-radius: 14px;
+    padding: 18px 14px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    transition: transform 0.18s ease, box-shadow 0.18s ease;
+    position: relative;
+    overflow: hidden;
+    transform: perspective(800px) rotateY(0);
+    pointer-events: auto;
+  }
+  .card-choice:hover {
+    transform: perspective(800px) translateY(-8px) rotateY(4deg) scale(1.04);
+    box-shadow: 0 24px 48px rgba(0, 0, 0, 0.6);
+  }
+  .card-choice.tier-common  { border-color: #6b7280; box-shadow: 0 0 12px rgba(107, 114, 128, 0.3); }
+  .card-choice.tier-rare    { border-color: #3b82f6; box-shadow: 0 0 24px rgba(59, 130, 246, 0.5); }
+  .card-choice.tier-legendary {
+    border-color: #f59e0b;
+    box-shadow: 0 0 32px rgba(245, 158, 11, 0.6);
+    animation: legendaryPulse 2s ease-in-out infinite;
+  }
+  .card-choice.tier-legendary::before {
+    content: '';
+    position: absolute;
+    top: 0; left: -100%;
+    width: 100%; height: 100%;
+    background: linear-gradient(120deg, transparent 35%, rgba(245, 158, 11, 0.18) 50%, transparent 65%);
+    animation: holoSheen 3s linear infinite;
+    pointer-events: none;
+  }
+  @keyframes legendaryPulse {
+    0%, 100% { box-shadow: 0 0 24px rgba(245, 158, 11, 0.5); }
+    50%      { box-shadow: 0 0 40px rgba(245, 158, 11, 0.9); }
+  }
+  @keyframes holoSheen {
+    0%   { left: -100%; }
+    100% { left: 100%; }
+  }
+  .card-choice.picked {
+    animation: cardPicked 0.4s ease forwards;
+  }
+  @keyframes cardPicked {
+    0%   { transform: scale(1); opacity: 1; }
+    50%  { transform: scale(1.18); }
+    100% { transform: scale(1.4); opacity: 0; }
+  }
+
+  .card-tier-label {
+    font-size: 10px;
+    letter-spacing: 3px;
+    font-weight: 700;
+    text-transform: uppercase;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .tier-common  .card-tier-label { color: #94a3b8; }
+  .tier-rare    .card-tier-label { color: #60a5fa; }
+  .tier-legendary .card-tier-label { color: #fbbf24; }
+
+  .card-emoji {
+    font-size: 64px;
+    line-height: 1;
+    filter: drop-shadow(0 4px 8px rgba(0,0,0,0.6));
+  }
+  .card-name {
+    font-size: 18px;
+    font-weight: 700;
+    color: #f1f5f9;
+    text-align: center;
+    letter-spacing: 1px;
+  }
+  .card-stack-rank {
+    font-size: 10px;
+    color: #fbbf24;
+    letter-spacing: 2px;
+    font-family: 'JetBrains Mono', monospace;
+    text-transform: uppercase;
+  }
+  .card-desc {
+    font-size: 12px;
+    color: #cbd5e1;
+    text-align: center;
+    line-height: 1.5;
+    padding: 0 4px;
+  }
+  .card-key-hint {
+    font-size: 11px;
+    font-family: 'JetBrains Mono', monospace;
+    color: #71717a;
+    border: 1px solid #3f3f46;
+    border-radius: 6px;
+    padding: 2px 8px;
+  }
+  .card-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 8px;
+  }
+  .card-actions button {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.12);
+    color: #d4d4d8;
+    padding: 8px 16px;
+    border-radius: 10px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .card-actions button:hover:not(:disabled) {
+    background: rgba(255, 180, 60, 0.15);
+    border-color: rgba(255, 180, 60, 0.4);
+    color: #fbbf24;
+  }
+  .card-actions button:disabled { opacity: 0.35; cursor: not-allowed; }
+  .card-hint {
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    font-family: 'JetBrains Mono', monospace;
+    color: #52525b;
+    text-transform: uppercase;
+  }
+
+  /* ─── CARDS ROW IN STAT PANEL ─── */
+  #cards-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 6px;
+    margin-bottom: 4px;
+  }
+  .card-icon {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid #6b7280;
+    border-radius: 6px;
+    padding: 2px 5px;
+    font-size: 13px;
+    font-family: 'JetBrains Mono', monospace;
+    color: #cbd5e1;
+    cursor: help;
+    line-height: 1;
+  }
+  .card-icon.tier-common  { border-color: #6b7280; }
+  .card-icon.tier-rare    { border-color: #3b82f6; box-shadow: 0 0 6px rgba(59,130,246,0.3); }
+  .card-icon.tier-legendary { border-color: #f59e0b; box-shadow: 0 0 6px rgba(245,158,11,0.5); }
+  .card-icon .stack-num {
+    font-size: 9px;
+    color: #fbbf24;
+    font-weight: 700;
+  }
+
+  /* ─── ACTIVE SKILLS BAR ─── */
+  #active-skills-row {
+    display: flex;
+    gap: 6px;
+    margin-top: 6px;
+  }
+  .skill-slot {
+    width: 38px; height: 38px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    font-size: 20px;
+    line-height: 1;
+    cursor: help;
+  }
+  .skill-slot.empty { opacity: 0.25; }
+  .skill-slot.ready { border-color: #22d3ee; box-shadow: 0 0 8px rgba(34, 211, 238, 0.4); }
+  .skill-slot.cd::after {
+    content: attr(data-cd);
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.65);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    color: #fbbf24;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .skill-slot .key-hint {
+    position: absolute;
+    top: -8px; left: 50%;
+    transform: translateX(-50%);
+    font-size: 8px;
+    color: #71717a;
+    background: rgba(5,5,10,0.9);
+    padding: 0 4px;
+    border-radius: 3px;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+  }
+
+  /* mobile card modal */
+  @media (max-width: 768px) {
+    .card-row { flex-direction: column; align-items: center; gap: 10px; }
+    .card-choice { width: 86vw; max-width: 360px; height: auto; min-height: 180px; padding: 12px; }
+    .card-emoji { font-size: 48px; }
+    .card-name { font-size: 15px; }
+    .card-desc { font-size: 11px; }
+    .card-modal-title { font-size: 14px; letter-spacing: 3px; }
+    #card-modal.open ~ #touch-controls { display: none; }
+  }
 </style>
 </head>
 <body>
@@ -511,6 +860,10 @@
     <div class="stat-row"><span class="stat-label">DEF</span><span class="stat-value def" id="s-def">1</span></div>
     <div class="stat-row"><span class="stat-label">FLOOR</span><span class="stat-value floor" id="s-floor">1</span></div>
     <div class="stat-row"><span class="stat-label">KILLS</span><span class="stat-value" id="s-kills">0</span></div>
+    <div class="stat-row"><span class="stat-label">TORCH</span><span class="stat-value" id="s-torch">3</span></div>
+    <div class="stat-row"><span class="stat-label">POISON</span><span class="stat-value" id="s-poison">—</span></div>
+    <div id="cards-row"></div>
+    <div id="active-skills-row"></div>
   </div>
 
   <div id="minimap-container">
@@ -518,6 +871,7 @@
     <canvas id="minimap" width="120" height="80"></canvas>
   </div>
 
+  <div id="equipment-bar"></div>
   <div id="inventory-bar"></div>
 
   <div id="message-log"></div>
@@ -529,8 +883,8 @@
   <div class="title-prompt" id="title-prompt-text">Press ENTER or SPACE to begin</div>
   <div class="title-controls" id="title-controls-text">
     <span>WASD / Arrows</span> — Move & Attack<br>
-    <span>1-5</span> — Use Item &nbsp; <span>Space</span> — Wait<br>
-    <span>G</span> — Pick Up &nbsp; <span>&gt;</span> — Descend Stairs
+    <span>1-9, 0</span> — Use Item &nbsp; <span>Space</span> — Wait<br>
+    <span>G</span> — Pick Up &nbsp; <span>&gt;</span> — Stairs &nbsp; <span>R</span> — Repair
   </div>
 </div>
 
@@ -544,6 +898,19 @@
   <div class="win-title">VICTORY</div>
   <div class="death-stats" id="win-stats"></div>
   <div class="title-prompt" id="win-prompt-text">Press ENTER to play again</div>
+</div>
+
+<div id="card-modal" class="hidden">
+  <div class="card-modal-content">
+    <div class="card-modal-title">LEVEL UP — CHOOSE 1 OF 3</div>
+    <div class="card-modal-counter" id="card-counter">Choice 1 of 1</div>
+    <div class="card-row" id="card-row"></div>
+    <div class="card-actions">
+      <button id="card-reroll">🎲 Reroll (0)</button>
+      <button id="card-skip">Skip (+10% HP)</button>
+    </div>
+    <div class="card-hint">1 / 2 / 3 — choose · R — reroll · ESC — skip</div>
+  </div>
 </div>
 
 <div id="touch-controls">
@@ -563,6 +930,7 @@
       </div>
       <div class="action-row">
         <div class="action-btn" data-action="wait">Wait</div>
+        <div class="action-btn" data-action="repair">⚒️</div>
       </div>
     </div>
   </div>
@@ -584,22 +952,44 @@ const CFG = {
   MAP_H: 44,
   TILE: 28,
   MAX_FLOOR: 10,
-  FOV_RADIUS: 9,
+  FOV_RADIUS: 9, // legacy fallback (unused)
+  TORCH_RADIUS: 3,
+  TORCH_RADIUS_MAX: 6,
+  LIT_ROOM_CHANCE: 0.20,
+  LIT_ROOM_MIN_PER_FLOOR: 1,
+  LIT_ROOM_AREA_THRESHOLD: 35,
+  TRAP_CHANCE_PER_ROOM: 0.35,
+  TRAP_CHANCE_CORRIDOR: 0.12,
   ROOM_MIN: 5,
   ROOM_MAX: 12,
   ROOM_MIN_H: 4,
   ROOM_MAX_H: 9,
-  INV_SIZE: 5,
+  INV_SIZE: 10,
   MSG_MAX: 5,
 };
 
-const TILE = { WALL: 0, FLOOR: 1, STAIRS: 2, CORRIDOR: 3 };
+// ─── TURN ENGINE CONSTANTS ───────────────────────
+const SPEED = { CRAWL: 25, SLOW: 50, NORMAL: 100, FAST: 150, BLINK: 200 };
+const ACTION_COST = { MOVE: 100, ATTACK: 100, WAIT: 100, PICKUP: 0, STAIRS: 0, CHARGE: 200 };
+const MOVE_PATTERN = {
+  ORTHOGONAL: 'ORTHOGONAL', DIAGONAL: 'DIAGONAL', OMNIDIRECTIONAL: 'OMNIDIRECTIONAL',
+  KNIGHT: 'KNIGHT', LEAP: 'LEAP', ZIGZAG: 'ZIGZAG',
+};
+const STATUS = {
+  POISON: 'POISON', REGEN: 'REGEN', SLOW: 'SLOW', HASTE: 'HASTE', FREEZE: 'FREEZE',
+  WEB: 'WEB', BLEED: 'BLEED', DRAIN_XP: 'DRAIN_XP',
+};
+
+const TILE = { WALL: 0, FLOOR: 1, STAIRS: 2, CORRIDOR: 3, ANVIL: 4 };
+
+const EMOJI_FONT = `'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif`;
 
 const COLORS = {
   bg: '#05050a',
   wallBase: [30, 30, 48],
   floorBase: [18, 18, 28],
   corridorBase: [15, 15, 24],
+  litRoomFloor: [55, 42, 22],
   stairsGlow: '#fbbf24',
   playerColor: '#22d3ee',
   playerGlow: 'rgba(34, 211, 238, 0.35)',
@@ -609,27 +999,726 @@ const COLORS = {
 };
 
 const ENEMY_DEFS = [
-  { name: 'Rat',         ch: 'r', color: '#a1a1aa', hp: 6,  atk: 2, def: 0, xp: 5,  minFloor: 1 },
-  { name: 'Bat',         ch: 'b', color: '#818cf8', hp: 4,  atk: 3, def: 0, xp: 6,  minFloor: 1 },
-  { name: 'Skeleton',    ch: 's', color: '#e5e5e5', hp: 10, atk: 3, def: 1, xp: 10, minFloor: 1 },
-  { name: 'Goblin',      ch: 'g', color: '#4ade80', hp: 12, atk: 4, def: 1, xp: 14, minFloor: 2 },
-  { name: 'Orc',         ch: 'o', color: '#a3e635', hp: 18, atk: 5, def: 2, xp: 20, minFloor: 3 },
-  { name: 'Dark Knight', ch: 'K', color: '#94a3b8', hp: 25, atk: 6, def: 3, xp: 30, minFloor: 4 },
-  { name: 'Wraith',      ch: 'W', color: '#c084fc', hp: 20, atk: 7, def: 1, xp: 35, minFloor: 5 },
-  { name: 'Demon',       ch: 'D', color: '#f87171', hp: 35, atk: 8, def: 3, xp: 50, minFloor: 6 },
-  { name: 'Lich',        ch: 'L', color: '#a78bfa', hp: 45, atk: 9, def: 4, xp: 70, minFloor: 8 },
-  { name: 'Dragon',      ch: 'Ω', color: '#ef4444', hp: 60, atk: 11,def: 5, xp: 100,minFloor: 9 },
+  { key:'rat',      emoji:'🐀',  name:'Rat',         ch:'r', color:'#a1a1aa', hp:6,  atk:2, def:0, xp:5,   minFloor:1, floor:[1,4],  weight:14, speed:SPEED.FAST,   movementPattern:MOVE_PATTERN.ORTHOGONAL,      ai:'coward'    },
+  { key:'snake',    emoji:'🐍',  name:'Snake',       ch:'s', color:'#4ade80', hp:8,  atk:3, def:0, xp:8,   minFloor:1, floor:[1,5],  weight:11, speed:SPEED.NORMAL, movementPattern:MOVE_PATTERN.ZIGZAG,          ai:'zigzagger', poison:{ticks:3, dmg:2} },
+  { key:'bat',      emoji:'🦇',  name:'Bat',         ch:'b', color:'#818cf8', hp:5,  atk:3, def:0, xp:7,   minFloor:1, floor:[1,6],  weight:10, speed:SPEED.FAST,   movementPattern:MOVE_PATTERN.DIAGONAL,        ai:'flyer',     dodge:0.5 },
+  { key:'spider',   emoji:'🕷️', name:'Spider',      ch:'S', color:'#a78bfa', hp:9,  atk:4, def:0, xp:12,  minFloor:2, floor:[2,7],  weight:9,  speed:SPEED.NORMAL, movementPattern:MOVE_PATTERN.OMNIDIRECTIONAL, ai:'ambusher',  webOnDeath:true, ambushRange:2 },
+  { key:'skeleton', emoji:'💀',  name:'Skeleton',    ch:'k', color:'#e5e5e5', hp:12, atk:4, def:1, xp:12,  minFloor:1, floor:[1,8],  weight:12, speed:SPEED.SLOW,   movementPattern:MOVE_PATTERN.ORTHOGONAL,      ai:'reviver',   reviveRange:3, reviveLimit:1 },
+  { key:'ghost',    emoji:'👻',  name:'Ghost',       ch:'G', color:'#cbd5e1', hp:10, atk:5, def:0, xp:18,  minFloor:3, floor:[3,10], weight:7,  speed:SPEED.NORMAL, movementPattern:MOVE_PATTERN.OMNIDIRECTIONAL, ai:'phaser',    phaseWalls:true, ignoresDef:true, vanishBelow:0.5, vanishTicks:3 },
+  { key:'goblin',   emoji:'👹',  name:'Goblin',      ch:'g', color:'#4ade80', hp:14, atk:4, def:1, xp:14,  minFloor:2, floor:[2,6],  weight:11, speed:SPEED.NORMAL, movementPattern:MOVE_PATTERN.ORTHOGONAL,      ai:'thrower',   throwRange:3, throwChance:0.35, throwDmg:3 },
+  { key:'orc',      emoji:'⚔️', name:'Orc Warrior', ch:'o', color:'#a3e635', hp:22, atk:6, def:2, xp:24,  minFloor:3, floor:[3,8],  weight:8,  speed:SPEED.SLOW,   movementPattern:MOVE_PATTERN.ORTHOGONAL,      ai:'charger',   chargeRange:3, bleed:{ticks:2, dmg:1} },
+  { key:'slime',    emoji:'🟢',  name:'Slime',       ch:'l', color:'#34d399', hp:16, atk:3, def:0, xp:10,  minFloor:2, floor:[2,6],  weight:8,  speed:SPEED.CRAWL,  movementPattern:MOVE_PATTERN.ORTHOGONAL,      ai:'splitter',  splitMinHp:8, splitGen:2 },
+  { key:'wraith',   emoji:'🌀',  name:'Wraith',      ch:'W', color:'#c084fc', hp:18, atk:5, def:1, xp:30,  minFloor:5, floor:[5,10], weight:6,  speed:SPEED.FAST,   movementPattern:MOVE_PATTERN.OMNIDIRECTIONAL, ai:'xpdrainer', drainXp:5 },
+  { key:'golem',    emoji:'🗿',  name:'Golem',       ch:'O', color:'#94a3b8', hp:50, atk:7, def:5, xp:45,  minFloor:4, floor:[4,10], weight:4,  speed:SPEED.CRAWL,  movementPattern:MOVE_PATTERN.ORTHOGONAL,      ai:'juggernaut',immune:['POISON','BLEED'] },
+  { key:'mimic',    emoji:'📦',  name:'Mimic',       ch:'m', color:'#d97706', hp:20, atk:8, def:2, xp:35,  minFloor:3, floor:[3,10], weight:4,  speed:SPEED.NORMAL, movementPattern:MOVE_PATTERN.ORTHOGONAL,      ai:'mimic',     disguise:'📦', disguiseRange:1 },
+  { key:'wizard',   emoji:'🧙',  name:'Wizard',      ch:'z', color:'#a78bfa', hp:16, atk:3, def:1, xp:40,  minFloor:5, floor:[5,10], weight:5,  speed:SPEED.NORMAL, movementPattern:MOVE_PATTERN.OMNIDIRECTIONAL, ai:'caster',    spellRange:5, fleeRange:2, fireDmg:4, freezeTicks:2 },
+  { key:'demon',    emoji:'😈',  name:'Demon',       ch:'D', color:'#f87171', hp:35, atk:8, def:3, xp:60,  minFloor:7, floor:[7,10], weight:3,  speed:SPEED.NORMAL, movementPattern:MOVE_PATTERN.OMNIDIRECTIONAL, ai:'teleporter',teleportEvery:5, aoeRadius:2, aoeDmg:6 },
+  { key:'dragon',   emoji:'🐉',  name:'Dragon',      ch:'Ω', color:'#ef4444', hp:80, atk:12,def:6, xp:200, minFloor:10,floor:[10,10],weight:1,  speed:SPEED.BLINK,  movementPattern:MOVE_PATTERN.OMNIDIRECTIONAL, ai:'dragon',    breathRange:5, breathDmg:8, breathCooldown:3, forceSpawn:true },
 ];
 
 const ITEM_DEFS = [
-  { name: 'Health Potion',   ch: '!', color: '#f87171', type: 'potion',  effect: 'heal',    value: 12 },
-  { name: 'Greater Potion',  ch: '!', color: '#fb923c', type: 'potion',  effect: 'heal',    value: 25 },
-  { name: 'Strength Elixir', ch: '!', color: '#ef4444', type: 'potion',  effect: 'str',     value: 2  },
-  { name: 'Iron Shield',     ch: ']', color: '#60a5fa', type: 'equip',   effect: 'def',     value: 2  },
-  { name: 'Steel Sword',     ch: ')', color: '#f5f5f5', type: 'equip',   effect: 'atk',     value: 2  },
-  { name: 'Fire Scroll',     ch: '?', color: '#f97316', type: 'scroll',  effect: 'fireball',value: 15 },
-  { name: 'Blink Scroll',    ch: '?', color: '#38bdf8', type: 'scroll',  effect: 'blink',   value: 0  },
+  // ─── WEAPONS ───
+  { id:'rusty_dagger',    name:'Rusty Dagger',     emoji:'🗡️', color:'#94a3b8', type:'weapon',    slot:'weapon',    atk:1, maxDur:50, minFloor:1, weight:6 },
+  { id:'kitchen_knife',   name:'Kitchen Knife',    emoji:'🔪', color:'#cbd5e1', type:'weapon',    slot:'weapon',    atk:2, maxDur:25, minFloor:1, weight:5 },
+  { id:'iron_sword',      name:'Iron Sword',       emoji:'⚔️', color:'#f5f5f5', type:'weapon',    slot:'weapon',    atk:4, maxDur:60, minFloor:2, weight:5 },
+  { id:'battle_axe',      name:'Battle Axe',       emoji:'🪓', color:'#a16207', type:'weapon',    slot:'weapon',    atk:6, maxDur:50, minFloor:4, weight:3, twoHanded:true, critChance:0.20 },
+  { id:'war_hammer',      name:'War Hammer',       emoji:'🔨', color:'#94a3b8', type:'weapon',    slot:'weapon',    atk:5, maxDur:70, minFloor:4, weight:3, twoHanded:true, stunChance:0.25 },
+  { id:'short_bow',       name:'Short Bow',        emoji:'🏹', color:'#a16207', type:'weapon',    slot:'weapon',    atk:3, maxDur:40, minFloor:3, weight:3, twoHanded:true, ranged:true },
+  { id:'apprentice_wand', name:'Apprentice Wand',  emoji:'🪄', color:'#a78bfa', type:'weapon',    slot:'weapon',    atk:2, maxDur:35, minFloor:3, weight:3, magic:true },
+  // ─── ARMOR ───
+  { id:'tattered_robes',  name:'Tattered Robes',   emoji:'🥋', color:'#a16207', type:'armor',     slot:'armor',     def:1, maxDur:30, minFloor:1, weight:5 },
+  { id:'leather_vest',    name:'Leather Vest',     emoji:'🦺', color:'#84cc16', type:'armor',     slot:'armor',     def:2, maxDur:50, minFloor:2, weight:5 },
+  { id:'chain_mail',      name:'Chain Mail',       emoji:'⚙️', color:'#94a3b8', type:'armor',     slot:'armor',     def:4, maxDur:80, minFloor:4, weight:3 },
+  // ─── OFFHAND ───
+  { id:'kite_shield',     name:'Kite Shield',      emoji:'🛡️', color:'#60a5fa', type:'offhand',   slot:'offhand',   def:2, maxDur:60, minFloor:3, weight:3, blockChance:0.15 },
+  { id:'lantern',         name:'Lantern',          emoji:'🪙', color:'#fbbf24', type:'offhand',   slot:'offhand',   def:0, maxDur:40, minFloor:2, weight:2, lanternBonus:1 },
+  // ─── ACCESSORIES ───
+  { id:'silver_ring',     name:'Silver Ring',      emoji:'💍', color:'#e5e7eb', type:'accessory', slot:'accessory', atk:1, def:1, minFloor:2, weight:3 },
+  { id:'crystal_amulet',  name:'Crystal Amulet',   emoji:'💎', color:'#22d3ee', type:'accessory', slot:'accessory', maxHp:5, minFloor:4, weight:2 },
+  { id:'evil_eye',        name:'Evil Eye',         emoji:'🧿', color:'#3b82f6', type:'accessory', slot:'accessory', critBonus:0.10, minFloor:5, weight:2 },
+  { id:'lucky_charm',     name:'Lucky Charm',      emoji:'🪬', color:'#fbbf24', type:'accessory', slot:'accessory', dropBonus:0.25, minFloor:6, weight:2 },
+  // ─── CONSUMABLES ───
+  { id:'health_potion',   name:'Health Potion',    emoji:'🧪', color:'#f87171', type:'potion',    slot:null,        effect:'heal',     value:12, minFloor:1, weight:8 },
+  { id:'herb',            name:'Healing Herb',     emoji:'🌿', color:'#4ade80', type:'potion',    slot:null,        effect:'heal',     value:5,  minFloor:1, weight:9 },
+  { id:'bread',           name:'Bread',            emoji:'🍞', color:'#d97706', type:'potion',    slot:null,        effect:'heal',     value:8,  minFloor:1, weight:7 },
+  { id:'fire_scroll',     name:'Fire Scroll',      emoji:'📜', color:'#f97316', type:'scroll',    slot:null,        effect:'fireball', value:15, minFloor:2, weight:4 },
+  { id:'blink_scroll',    name:'Blink Scroll',     emoji:'📜', color:'#38bdf8', type:'scroll',    slot:null,        effect:'blink',    value:0,  minFloor:2, weight:3 },
+  { id:'key',             name:'Skeleton Key',     emoji:'🗝️', color:'#fbbf24', type:'key',       slot:null,        effect:'unlock',   value:0,  minFloor:3, weight:2 },
 ];
+
+const TRAP_DEFS = [
+  { type: 'spike',     name: 'Spike Trap',     ch: '^', color: '#c2410c', dmg: [4, 8],  minFloor: 1, msg: 'Spikes shoot up! {dmg} damage.', aoeRadius: 0 },
+  { type: 'pit',       name: 'Pit Trap',       ch: 'o', color: '#1e1b18', dmg: [0, 0],  minFloor: 2, msg: 'The floor gives way!',           aoeRadius: 0, effect: 'fall' },
+  { type: 'explosion', name: 'Explosive Rune', ch: '*', color: '#f97316', dmg: [6, 12], minFloor: 3, msg: 'A rune detonates!',              aoeRadius: 2, effect: 'aoe' },
+  { type: 'poison',    name: 'Poison Vent',    ch: '%', color: '#4ade80', dmg: [2, 4],  minFloor: 4, msg: 'Poison gas erupts!',             aoeRadius: 0, effect: 'poison', poisonTurns: 5 },
+  { type: 'alarm',     name: 'Alarm Bell',     ch: '!', color: '#fbbf24', dmg: [0, 0],  minFloor: 2, msg: 'Alarm rings!',                   aoeRadius: 12, effect: 'alarm' },
+];
+
+// ─── CARDS SYSTEM (PLAN 05) ─────────────────────
+// CARD_DEFS — 40+ cards, 5 categories (stat / perk / active / weapon / legendary / synergy)
+const CARD_DEFS = [
+  // ─── STAT (common, stackable) ──────────────────
+  { id:'brawn',       name:'Brawn',        emoji:'💪', tier:'common', category:'stat', maxStacks:5,
+    description:'+2 ATK per rank',
+    descriptionFn: s => `+${s*2} ATK total`,
+    recompute:(p,_st,s)=>{ p.atk += 2 * s; } },
+  { id:'resilience',  name:'Resilience',   emoji:'🛡️', tier:'common', category:'stat', maxStacks:5,
+    description:'+2 DEF per rank',
+    descriptionFn: s => `+${s*2} DEF total`,
+    recompute:(p,_st,s)=>{ p.def += 2 * s; } },
+  { id:'vigor',       name:'Vigor',        emoji:'❤️', tier:'common', category:'stat', maxStacks:5,
+    description:'+10 max HP per rank',
+    descriptionFn: s => `+${s*10} max HP total`,
+    recompute:(p,_st,s)=>{ p.maxHp += 10 * s; } },
+  { id:'swift',       name:'Swift',        emoji:'⚡', tier:'common', category:'stat', maxStacks:3,
+    description:'+10 speed per rank',
+    descriptionFn: s => `+${s*10} speed total`,
+    recompute:(p,_st,s)=>{ p.speed += 10 * s; } },
+  { id:'sharp_eyes',  name:'Sharp Eyes',   emoji:'👁️', tier:'common', category:'stat', maxStacks:3,
+    description:'+1 torch radius per rank',
+    descriptionFn: s => `+${s} torch radius`,
+    recompute:(p,_st,s)=>{ p.torchBonus += 1 * s; } },
+  { id:'lucky',       name:'Lucky',        emoji:'🍀', tier:'common', category:'stat', maxStacks:5,
+    description:'+5% crit chance per rank',
+    descriptionFn: s => `+${s*5}% crit chance`,
+    recompute:(p,_st,s)=>{ p.critChance += 0.05 * s; } },
+  { id:'lifesteal',   name:'Lifesteal',    emoji:'🩸', tier:'common', category:'stat', maxStacks:3,
+    description:'10% melee damage → heal',
+    descriptionFn: s => `${s*10}% melee → heal`,
+    recompute:(p,_st,s)=>{ p.lifestealPct += 0.10 * s; } },
+  { id:'accurate',    name:'Accurate',     emoji:'🎯', tier:'common', category:'stat', maxStacks:3,
+    description:'+10% to-hit (less variance)',
+    descriptionFn: s => `+${s*10}% accuracy`,
+    recompute:(p,_st,s)=>{ p.accuracyBonus += 0.10 * s; } },
+  { id:'tough_skin',  name:'Tough Skin',   emoji:'🧱', tier:'common', category:'stat', maxStacks:3,
+    description:'+10 max armor durability',
+    descriptionFn: s => `+${s*10} armor max dur`,
+    recompute:(p,st,s)=>{
+      const arm = st.player.equipment.armor;
+      if (arm && arm.maxDur) {
+        const bonus = 10 * s;
+        // mark with __toughSkinBonus to allow reset between recomputes
+        if (arm.__toughSkinBonus !== bonus) {
+          const prev = arm.__toughSkinBonus || 0;
+          arm.maxDur = arm.maxDur - prev + bonus;
+          arm.dur = Math.min(arm.dur + (bonus - prev), arm.maxDur);
+          arm.__toughSkinBonus = bonus;
+        }
+      }
+    } },
+  { id:'endurance',   name:'Endurance',    emoji:'🫁', tier:'common', category:'stat', maxStacks:3,
+    description:'-10% damage taken (placeholder hunger reduction)',
+    descriptionFn: s => `-${s*10}% damage taken`,
+    recompute:(p,_st,s)=>{ p.dmgReduction += 0.10 * s; } },
+
+  // ─── PERK (rare, unique) ──────────────────────
+  { id:'bone_collector', name:'Bone Collector', emoji:'🦴', tier:'rare', category:'perk', maxStacks:1,
+    description:'+50% XP from bone enemies',
+    recompute:(p,_st,_s)=>{ p.flags.boneCollector = true; } },
+  { id:'magnetic',     name:'Magnetic',     emoji:'🧲', tier:'rare', category:'perk', maxStacks:1,
+    description:'Auto-pickup items in radius 3',
+    recompute:(p,_st,_s)=>{ p.flags.magnetic = true; } },
+  { id:'cat_reflexes', name:'Cat Reflexes', emoji:'👣', tier:'rare', category:'perk', maxStacks:1,
+    description:'20% chance to dodge attacks',
+    recompute:(p,_st,_s)=>{ p.dodgeChance += 0.20; } },
+  { id:'fire_aura',    name:'Fire Aura',    emoji:'🔥', tier:'rare', category:'perk', maxStacks:1,
+    description:'1 dmg/turn to enemies in r1',
+    recompute:(p,_st,_s)=>{ p.flags.fireAura = true; } },
+  { id:'ice_aura',     name:'Ice Aura',     emoji:'❄️', tier:'rare', category:'perk', maxStacks:1,
+    description:'Adjacent enemies SLOW each turn',
+    recompute:(p,_st,_s)=>{ p.flags.iceAura = true; } },
+  { id:'regeneration', name:'Regeneration', emoji:'🩹', tier:'rare', category:'perk', maxStacks:1,
+    description:'+1 HP every 5 turns',
+    recompute:(p,_st,_s)=>{ p.flags.regeneration = true; } },
+  { id:'tactical',     name:'Tactical',     emoji:'🧠', tier:'rare', category:'perk', maxStacks:1,
+    description:'First hit on enemy: +50% damage',
+    recompute:(p,_st,_s)=>{ p.flags.tactical = true; } },
+  { id:'dual_wield',   name:'Dual Wield',   emoji:'⚔️', tier:'rare', category:'perk', maxStacks:1,
+    description:'25% chance second strike (½ dmg)',
+    recompute:(p,_st,_s)=>{ p.flags.dualWield = true; } },
+  { id:'sprinter',     name:'Sprinter',     emoji:'🏃', tier:'rare', category:'perk', maxStacks:1,
+    description:'After 5 turns no combat: speed +50%',
+    recompute:(p,_st,_s)=>{ p.flags.sprinter = true; } },
+  { id:'resilient_aura', name:'Resilient Aura', emoji:'🧿', tier:'rare', category:'perk', maxStacks:1,
+    description:'-1 damage from all sources',
+    recompute:(p,_st,_s)=>{ p.flags.resilientAura = true; } },
+
+  // ─── ACTIVE (Q/E, cooldown) ───────────────────
+  { id:'whirlwind',  name:'Whirlwind',  emoji:'💥', tier:'rare', category:'active', maxStacks:1,
+    description:'CD 10. Hit all 8 adjacent for 1.5× ATK',
+    active:{ cooldown:10 } },
+  { id:'blink',      name:'Blink',      emoji:'🌀', tier:'rare', category:'active', maxStacks:1,
+    description:'CD 8. Teleport to random visible floor (r5)',
+    active:{ cooldown:8 } },
+  { id:'shield_bash',name:'Shield Bash',emoji:'🛡️', tier:'rare', category:'active', maxStacks:1,
+    description:'CD 6. Stun nearest adjacent enemy 2 turns',
+    active:{ cooldown:6 } },
+  { id:'firebolt',   name:'Firebolt',   emoji:'🔥', tier:'rare', category:'active', maxStacks:1,
+    description:'CD 4. Fire bolt → nearest visible enemy, 3+ATK dmg',
+    active:{ cooldown:4 } },
+  { id:'frost_nova', name:'Frost Nova', emoji:'❄️', tier:'rare', category:'active', maxStacks:1,
+    description:'CD 12. Freeze enemies in r3 for 5 ticks',
+    active:{ cooldown:12 } },
+  { id:'death_touch',name:'Death Touch',emoji:'💀', tier:'rare', category:'active', maxStacks:1,
+    description:'CD 15. Instant kill nearest enemy <30% HP, else 3× dmg',
+    active:{ cooldown:15 } },
+
+  // ─── WEAPON SYNERGY (rare, prereq weapon type) ───
+  { id:'sword_mastery', name:'Sword Mastery', emoji:'⚔️', tier:'rare', category:'weapon', maxStacks:1,
+    description:'+30% damage with swords/daggers',
+    prereqs:{ weaponType:['sword','dagger'] },
+    recompute:(p,_st,_s)=>{ p.flags.swordMastery = true; } },
+  { id:'marksman',      name:'Marksman',      emoji:'🏹', tier:'rare', category:'weapon', maxStacks:1,
+    description:'Bow attacks +50% dmg, ignore 50% DEF',
+    prereqs:{ weaponType:['bow'] },
+    recompute:(p,_st,_s)=>{ p.flags.marksman = true; } },
+  { id:'berserker',     name:'Berserker',     emoji:'🪓', tier:'rare', category:'weapon', maxStacks:1,
+    description:'<50% HP: +100% dmg, +25% speed',
+    prereqs:{ weaponType:['axe'] },
+    recompute:(p,_st,_s)=>{ p.flags.berserker = true; } },
+  { id:'dagger_dance',  name:'Dagger Dance',  emoji:'🗡️', tier:'rare', category:'weapon', maxStacks:1,
+    description:'After kill: next attack guaranteed crit',
+    prereqs:{ weaponType:['dagger'] },
+    recompute:(p,_st,_s)=>{ p.flags.daggerDance = true; } },
+  { id:'mace_crusher',  name:'Mace Crusher',  emoji:'🔨', tier:'rare', category:'weapon', maxStacks:1,
+    description:'Hammer attacks ignore DEF',
+    prereqs:{ weaponType:['hammer','mace'] },
+    recompute:(p,_st,_s)=>{ p.flags.maceCrusher = true; } },
+
+  // ─── LEGENDARY ────────────────────────────────
+  { id:'kings_resolve', name:"King's Resolve", emoji:'👑', tier:'legendary', category:'legendary', maxStacks:1,
+    description:'Full heal + +20 max HP',
+    recompute:(p,_st,_s)=>{ p.maxHp += 20; },
+    onPick:(p,_st)=>{ p.hp = p.maxHp; } },
+  { id:'stardust',      name:'Stardust',       emoji:'🌟', tier:'legendary', category:'legendary', maxStacks:1,
+    description:'All active skill cooldowns -50%',
+    recompute:(p,_st,_s)=>{ p.flags.stardust = true; } },
+  { id:'dragons_blood', name:"Dragon's Blood", emoji:'🐉', tier:'legendary', category:'legendary', maxStacks:1,
+    description:'Immune to fire; +50% damage vs bosses',
+    recompute:(p,_st,_s)=>{ p.flags.dragonsBlood = true; } },
+  { id:'mythril_body',  name:'Mythril Body',   emoji:'💎', tier:'legendary', category:'legendary', maxStacks:1,
+    description:'Armor never loses durability',
+    recompute:(p,_st,_s)=>{ p.flags.mythrilBody = true; } },
+  { id:'doppelganger',  name:'Doppelganger',   emoji:'🎭', tier:'legendary', category:'legendary', maxStacks:1,
+    description:'25% chance: attack hits twice',
+    recompute:(p,_st,_s)=>{ p.flags.doppelganger = true; } },
+  { id:'necromancer',   name:'Necromancer',    emoji:'☠️', tier:'legendary', category:'legendary', maxStacks:1,
+    description:'30% kill → enemy raised as ally (10 ticks)',
+    recompute:(p,_st,_s)=>{ p.flags.necromancer = true; } },
+  { id:'tempest',       name:'Tempest',        emoji:'🌪️', tier:'legendary', category:'legendary', maxStacks:1,
+    description:'Each step: spawn tornado at old tile (5 ticks, 1 dmg)',
+    recompute:(p,_st,_s)=>{ p.flags.tempest = true; } },
+
+  // ─── SYNERGY (legendary, prereqs + minPlayerLevel 6) ───
+  { id:'hellfire',      name:'Hellfire',       emoji:'🔥', tier:'legendary', category:'synergy', maxStacks:1,
+    description:'Fire Aura r2, dmg 3; Death Touch threshold ↑50%',
+    prereqs:{ cards:[{id:'fire_aura',minStack:1},{id:'death_touch',minStack:1}], minPlayerLevel:6 },
+    weight:2.0,
+    recompute:(p,_st,_s)=>{ p.flags.hellfire = true; } },
+  { id:'true_sight',    name:'True Sight',     emoji:'👁️', tier:'legendary', category:'synergy', maxStacks:1,
+    description:'See enemy HP; +20% crit; +2 torch radius',
+    prereqs:{ cards:[{id:'sharp_eyes',minStack:3},{id:'lucky',minStack:3}], minPlayerLevel:6 },
+    weight:2.0,
+    recompute:(p,_st,_s)=>{ p.critChance += 0.20; p.torchBonus += 2; p.flags.trueSight = true; } },
+];
+
+// ─── CARD HELPERS ─────────────────────────────
+function findCardDef(id) { return CARD_DEFS.find(c => c.id === id); }
+
+function playerCardStack(id) {
+  if (!state || !state.cards) return 0;
+  const c = state.cards.find(c => c.id === id);
+  return c ? c.stacks : 0;
+}
+
+function playerHasCard(id, minStack = 1) { return playerCardStack(id) >= minStack; }
+
+function getWeaponType() {
+  const w = getEquippedWeapon();
+  if (!w) return null;
+  const id = (w.id || '').toLowerCase();
+  if (id.includes('dagger') || id.includes('knife')) return 'dagger';
+  if (id.includes('sword'))   return 'sword';
+  if (id.includes('axe'))     return 'axe';
+  if (id.includes('hammer'))  return 'hammer';
+  if (id.includes('mace') || id.includes('club'))    return 'mace';
+  if (id.includes('bow'))     return 'bow';
+  if (id.includes('wand') || w.magic) return 'wand';
+  return null;
+}
+
+function isCardAvailable(card) {
+  const p = state.player;
+  // Maxed?
+  const stack = playerCardStack(card.id);
+  if (stack >= (card.maxStacks || 1)) return false;
+  // Prereqs
+  if (card.prereqs) {
+    if (card.prereqs.cards) {
+      for (const req of card.prereqs.cards) {
+        if (!playerHasCard(req.id, req.minStack || 1)) return false;
+      }
+    }
+    if (card.prereqs.minPlayerLevel && p.level < card.prereqs.minPlayerLevel) return false;
+    if (card.prereqs.weaponType) {
+      const wt = getWeaponType();
+      if (!wt || !card.prereqs.weaponType.includes(wt)) return false;
+    }
+  }
+  // F13: synergy cards always require lvl >= 6
+  if (card.category === 'synergy' && p.level < 6) return false;
+  // Active skill: max 2 active in build (replace not implemented — block third)
+  if (card.category === 'active') {
+    const activeCount = state.activeSkills.length;
+    if (activeCount >= 2 && !state.activeSkills.find(a => a.id === card.id)) return false;
+  }
+  return true;
+}
+
+function rollTier(forceLegendary) {
+  if (forceLegendary) return 'legendary';
+  const r = Math.random();
+  if (r < 0.10) return 'legendary';
+  if (r < 0.40) return 'rare';
+  return 'common';
+}
+
+function weightedPick(arr, weightFn) {
+  const total = arr.reduce((s, x) => s + (weightFn ? weightFn(x) : 1), 0);
+  let r = Math.random() * total;
+  for (const x of arr) {
+    r -= (weightFn ? weightFn(x) : 1);
+    if (r <= 0) return x;
+  }
+  return arr[arr.length - 1];
+}
+
+function drawCardChoices(count = 3) {
+  const pool = CARD_DEFS.filter(c => isCardAvailable(c));
+  if (pool.length === 0) return [];
+  const choices = [];
+  // F11 — pity slot when pityCounter >= 7: guarantee one legendary in this draft
+  const pityHit = state.pityCounter >= 7;
+  for (let i = 0; i < count; i++) {
+    const tierForce = (pityHit && i === 0) ? 'legendary' : null;
+    const tier = tierForce || rollTier();
+    let tierPool = pool.filter(c => c.tier === tier && !choices.includes(c));
+    if (tierPool.length === 0) tierPool = pool.filter(c => !choices.includes(c));
+    if (tierPool.length === 0) break;
+    const card = weightedPick(tierPool, c => c.weight || 1.0);
+    choices.push(card);
+  }
+  return choices;
+}
+
+function applyCard(card) {
+  const existing = state.cards.find(c => c.id === card.id);
+  if (existing) existing.stacks++;
+  else state.cards.push({ id: card.id, stacks: 1 });
+
+  // pity counter
+  if (card.tier === 'legendary') state.pityCounter = 0;
+  else state.pityCounter++;
+
+  // Reroll bonus from "insight" — currently +1 reroll only on legendary as small QoL
+  // (Plan does not include explicit insight card; keep hook: legendary adds +1 reroll if not present)
+
+  // Active skill: bind to first free slot
+  if (card.category === 'active') {
+    const exists = state.activeSkills.find(a => a.id === card.id);
+    if (!exists) {
+      const slot = state.activeSkills.length; // 0 → Q, 1 → E
+      if (slot < 2) {
+        state.activeSkills.push({ id: card.id, cdRemaining: 0, slot });
+      }
+    }
+  }
+
+  recomputeStats();
+
+  if (card.onPick) card.onPick(state.player, state);
+
+  addMessage(`Acquired ${card.emoji} ${card.name}!`, 'level');
+  spawnParticles(state.player.x, state.player.y, 16, '#fbbf24', 2.5, 30);
+}
+
+function recomputeStats() {
+  if (!state || !state.player) return;
+  const p = state.player;
+  const oldMaxHp = p.maxHp || 1;
+  const hpRatio = p.hp / oldMaxHp;
+
+  // Reset to base
+  p.atk = p.baseAtk;
+  p.def = p.baseDef;
+  p.maxHp = p.baseMaxHp + (state.player.level - 1) * 6; // level scaling preserved (no card-less hardcoded boost in gainXP)
+  p.speed = p.baseSpeed;
+  p.torchBonus = 0;
+  p.critChance = 0.05; // base 5%
+  p.dodgeChance = 0;
+  p.lifestealPct = 0;
+  p.accuracyBonus = 0;
+  p.dmgReduction = 0;
+  p.flags = {};
+
+  // Apply card recompute hooks
+  for (const c of (state.cards || [])) {
+    const def = findCardDef(c.id);
+    if (def && def.recompute) def.recompute(p, state, c.stacks);
+  }
+
+  // Accessory maxHp bonus stacks on top
+  p.maxHp += getAccessoryMaxHpBonus();
+
+  // Preserve HP ratio
+  p.hp = Math.max(1, Math.min(Math.round(p.maxHp * hpRatio), p.maxHp));
+}
+
+// ─── CARD MODAL UI ──────────────────────────────
+function showCardDraft() {
+  if (state.pendingLevelups <= 0) return;
+  const choices = drawCardChoices(3);
+  if (choices.length === 0) {
+    // No cards: full heal as consolation
+    state.player.hp = state.player.maxHp;
+    addMessage('All cards mastered! Full heal.', 'level');
+    state.pendingLevelups--;
+    if (state.pendingLevelups > 0) showCardDraft();
+    return;
+  }
+  state.pendingCardChoices = { choices, rerollUsed: false };
+  state.choosingCard = true;
+  renderCardModal();
+  const modal = document.getElementById('card-modal');
+  if (modal) modal.classList.remove('hidden');
+}
+
+function renderCardModal() {
+  const row = document.getElementById('card-row');
+  const counter = document.getElementById('card-counter');
+  const rerollBtn = document.getElementById('card-reroll');
+  if (!row || !state.pendingCardChoices) return;
+  const { choices } = state.pendingCardChoices;
+  // count remaining levelups for counter
+  const total = state.pendingLevelups;
+  if (counter) counter.textContent = total > 1 ? `Choice (${total} levelups queued)` : 'Choose 1 of 3';
+
+  let html = '';
+  choices.forEach((card, idx) => {
+    const stack = playerCardStack(card.id);
+    const stackStr = (card.maxStacks || 1) > 1
+      ? (stack === 0 ? 'NEW · I' : `${toRoman(stack)} → ${toRoman(stack+1)}`)
+      : 'NEW';
+    const desc = card.descriptionFn ? card.descriptionFn(stack + 1) : card.description;
+    html += `<div class="card-choice tier-${card.tier}" data-idx="${idx}">
+      <div class="card-tier-label">${card.tier}</div>
+      <div class="card-emoji">${card.emoji}</div>
+      <div class="card-name">${card.name}</div>
+      <div class="card-stack-rank">${stackStr}</div>
+      <div class="card-desc">${desc}</div>
+      <div class="card-key-hint">[${idx + 1}]</div>
+    </div>`;
+  });
+  row.innerHTML = html;
+
+  // Update reroll button label / state
+  if (rerollBtn) {
+    rerollBtn.textContent = `🎲 Reroll (${state.cardRerolls})`;
+    rerollBtn.disabled = state.cardRerolls <= 0 || state.pendingCardChoices.rerollUsed;
+  }
+
+  // Attach card click handlers
+  row.querySelectorAll('.card-choice').forEach(el => {
+    el.addEventListener('click', () => {
+      const idx = parseInt(el.dataset.idx);
+      pickCard(idx);
+    });
+  });
+}
+
+function toRoman(n) {
+  const map = ['','I','II','III','IV','V','VI','VII','VIII','IX','X'];
+  return map[n] || String(n);
+}
+
+function pickCard(idx) {
+  if (!state.pendingCardChoices) return;
+  const card = state.pendingCardChoices.choices[idx];
+  if (!card) return;
+  // Animation
+  const el = document.querySelector(`#card-row .card-choice[data-idx="${idx}"]`);
+  if (el) el.classList.add('picked');
+  setTimeout(() => {
+    applyCard(card);
+    state.pendingCardChoices = null;
+    state.pendingLevelups--;
+    state.choosingCard = false;
+    closeCardModal();
+    if (state.pendingLevelups > 0) showCardDraft();
+  }, 200);
+}
+
+function rerollCards() {
+  if (!state.pendingCardChoices || state.pendingCardChoices.rerollUsed) return;
+  if (state.cardRerolls <= 0) return;
+  state.cardRerolls--;
+  state.pendingCardChoices.rerollUsed = true;
+  state.pendingCardChoices.choices = drawCardChoices(3);
+  renderCardModal();
+}
+
+function skipCard() {
+  if (!state.pendingCardChoices) return;
+  const heal = Math.floor(state.player.maxHp * 0.10);
+  state.player.hp = Math.min(state.player.maxHp, state.player.hp + heal);
+  addMessage(`Skipped — restored ${heal} HP.`, 'info');
+  state.pendingCardChoices = null;
+  state.pendingLevelups--;
+  state.choosingCard = false;
+  closeCardModal();
+  if (state.pendingLevelups > 0) showCardDraft();
+}
+
+function closeCardModal() {
+  const modal = document.getElementById('card-modal');
+  if (modal) modal.classList.add('hidden');
+}
+
+function queueLevelupChoice() {
+  state.pendingLevelups = (state.pendingLevelups || 0) + 1;
+  if (gamePhase === 'playing' && !state.choosingCard) showCardDraft();
+}
+
+// ─── ACTIVE SKILLS ─────────────────────────────
+function useActiveSkill(slot) {
+  if (gamePhase !== 'playing') return;
+  if (state.choosingCard) return;
+  const skill = state.activeSkills.find(s => s.slot === slot);
+  if (!skill) return;
+  if (skill.cdRemaining > 0) {
+    addMessage(`Skill on cooldown (${skill.cdRemaining}).`, 'info');
+    return;
+  }
+  const card = findCardDef(skill.id);
+  if (!card) return;
+  const ok = executeActiveSkill(skill.id);
+  if (!ok) return;
+  let cd = (card.active && card.active.cooldown) ? card.active.cooldown : 10;
+  if (state.player.flags && state.player.flags.stardust) cd = Math.max(1, Math.floor(cd * 0.5));
+  skill.cdRemaining = cd;
+  state.player.energy -= ACTION_COST.WAIT;
+  processWorld();
+}
+
+function executeActiveSkill(id) {
+  const p = state.player;
+  if (id === 'whirlwind') {
+    let hit = 0;
+    for (let dy = -1; dy <= 1; dy++) {
+      for (let dx = -1; dx <= 1; dx++) {
+        if (dx === 0 && dy === 0) continue;
+        const tx = p.x + dx, ty = p.y + dy;
+        const e = state.enemies.find(en => en.x === tx && en.y === ty && en.hp > 0);
+        if (e) {
+          const dmg = Math.max(1, Math.floor(getPlayerAtk() * 1.5) - (e.def || 0));
+          e.hp -= dmg;
+          spawnFloatingText(e.x, e.y, `-${dmg}`, '#fbbf24');
+          spawnParticles(e.x, e.y, 8, '#fbbf24', 2.5, 18);
+          if (e.hp <= 0) { state.kills++; gainXP(e.xp); onEnemyKilled(e); }
+          hit++;
+        }
+      }
+    }
+    addMessage(`Whirlwind hits ${hit}!`, 'combat');
+    state.screenShake = 6;
+    return true;
+  }
+  if (id === 'blink') {
+    const candidates = [];
+    for (let dy = -5; dy <= 5; dy++) {
+      for (let dx = -5; dx <= 5; dx++) {
+        const tx = p.x + dx, ty = p.y + dy;
+        if (tx < 0 || tx >= CFG.MAP_W || ty < 0 || ty >= CFG.MAP_H) continue;
+        if (state.map[ty][tx] === TILE.WALL) continue;
+        if (!state.visible.has(key(tx, ty))) continue;
+        if (state.enemies.find(e => e.x === tx && e.y === ty && e.hp > 0)) continue;
+        const d = dist(p.x, p.y, tx, ty);
+        if (d > 5 || d < 1) continue;
+        candidates.push({ x: tx, y: ty });
+      }
+    }
+    if (candidates.length === 0) {
+      addMessage('Nowhere to blink!', 'info');
+      return false;
+    }
+    const t = candidates[rand(0, candidates.length - 1)];
+    const ox = p.x, oy = p.y;
+    p.x = t.x; p.y = t.y;
+    spawnParticles(ox, oy, 14, '#38bdf8', 3, 22);
+    spawnParticles(p.x, p.y, 14, '#38bdf8', 3, 22);
+    addMessage('Blink!', 'info');
+    return true;
+  }
+  if (id === 'shield_bash') {
+    let nearest = null, nd = 999;
+    for (const e of state.enemies) {
+      if (e.hp <= 0) continue;
+      const d = chebyshev(e, p);
+      if (d <= 1 && d < nd) { nd = d; nearest = e; }
+    }
+    if (!nearest) { addMessage('No adjacent target.', 'info'); return false; }
+    const dmg = Math.max(1, Math.floor(getPlayerAtk() * 0.5) - (nearest.def || 0));
+    nearest.hp -= dmg;
+    addStatusEffect(nearest, STATUS.FREEZE, 2, 0);
+    spawnFloatingText(nearest.x, nearest.y, 'STUN', '#60a5fa');
+    if (nearest.hp <= 0) { state.kills++; gainXP(nearest.xp); onEnemyKilled(nearest); }
+    return true;
+  }
+  if (id === 'firebolt') {
+    let target = null, nd = 999;
+    for (const e of state.enemies) {
+      if (e.hp <= 0) continue;
+      if (!state.visible.has(key(e.x, e.y))) continue;
+      const d = dist(p.x, p.y, e.x, e.y);
+      if (d < nd) { nd = d; target = e; }
+    }
+    if (!target) { addMessage('No visible target.', 'info'); return false; }
+    const dmg = 3 + getPlayerAtk();
+    target.hp -= dmg;
+    addStatusEffect(target, STATUS.BLEED, 3, 2); // burn proxy
+    spawnFloatingText(target.x, target.y, `-${dmg}🔥`, '#f97316');
+    spawnParticles(target.x, target.y, 18, '#f97316', 3, 28);
+    if (target.hp <= 0) { state.kills++; gainXP(target.xp); onEnemyKilled(target); }
+    return true;
+  }
+  if (id === 'frost_nova') {
+    let hit = 0;
+    for (const e of state.enemies) {
+      if (e.hp <= 0) continue;
+      if (dist(p.x, p.y, e.x, e.y) <= 3) {
+        addStatusEffect(e, STATUS.FREEZE, 5, 0);
+        spawnFloatingText(e.x, e.y, 'FREEZE', '#38bdf8');
+        hit++;
+      }
+    }
+    spawnParticles(p.x, p.y, 30, '#38bdf8', 3.5, 30);
+    addMessage(`Frost Nova froze ${hit}!`, 'info');
+    return true;
+  }
+  if (id === 'death_touch') {
+    let target = null, nd = 999;
+    for (const e of state.enemies) {
+      if (e.hp <= 0) continue;
+      const d = dist(p.x, p.y, e.x, e.y);
+      if (d < nd && d <= 6) { nd = d; target = e; }
+    }
+    if (!target) { addMessage('No target.', 'info'); return false; }
+    const threshold = state.player.flags.hellfire ? 0.50 : 0.30;
+    if (target.hp / target.maxHp < threshold) {
+      target.hp = 0;
+      addMessage(`${target.name} crumbles to dust!`, 'combat');
+      spawnParticles(target.x, target.y, 24, '#a855f7', 3, 30);
+      state.kills++; gainXP(target.xp); onEnemyKilled(target);
+    } else {
+      const dmg = getPlayerAtk() * 3;
+      target.hp -= dmg;
+      spawnFloatingText(target.x, target.y, `-${dmg}💀`, '#a855f7');
+      if (target.hp <= 0) { state.kills++; gainXP(target.xp); onEnemyKilled(target); }
+    }
+    return true;
+  }
+  return false;
+}
+
+function tickActiveCooldowns() {
+  for (const s of state.activeSkills || []) {
+    if (s.cdRemaining > 0) s.cdRemaining--;
+  }
+}
+
+// ─── PER-TURN CARD HOOKS ────────────────────────
+function processCardTicks() {
+  const p = state.player;
+  if (!p.flags) return;
+
+  // Fire Aura (and Hellfire upgrade)
+  if (p.flags.fireAura) {
+    const r = p.flags.hellfire ? 2 : 1;
+    const dmg = p.flags.hellfire ? 3 : 1;
+    for (const e of state.enemies) {
+      if (e.hp <= 0) continue;
+      if (dist(p.x, p.y, e.x, e.y) <= r) {
+        e.hp -= dmg;
+        spawnFloatingText(e.x, e.y, `-${dmg}`, '#f97316');
+        if (e.hp <= 0) { state.kills++; gainXP(e.xp); onEnemyKilled(e); }
+      }
+    }
+  }
+
+  // Ice Aura
+  if (p.flags.iceAura) {
+    for (const e of state.enemies) {
+      if (e.hp <= 0) continue;
+      if (chebyshev(p, e) <= 1) {
+        addStatusEffect(e, STATUS.SLOW, 1, 0);
+      }
+    }
+  }
+
+  // Regeneration: every 5 ticks +1 HP
+  if (p.flags.regeneration && state.worldTick % 5 === 0 && p.hp < p.maxHp) {
+    p.hp = Math.min(p.maxHp, p.hp + 1);
+    spawnFloatingText(p.x, p.y, '+1', '#4ade80');
+  }
+
+  // Tornadoes (tempest): tick TTL & damage enemies on tile
+  if (state.tornadoes && state.tornadoes.length > 0) {
+    for (const t of state.tornadoes) {
+      t.ttl--;
+      const e = state.enemies.find(en => en.x === t.x && en.y === t.y && en.hp > 0);
+      if (e) {
+        e.hp -= 1;
+        spawnFloatingText(e.x, e.y, '-1🌪️', '#94a3b8');
+        if (e.hp <= 0) { state.kills++; gainXP(e.xp); onEnemyKilled(e); }
+      }
+    }
+    state.tornadoes = state.tornadoes.filter(t => t.ttl > 0);
+  }
+
+  // Ally tick (necromancer): decrement ttl
+  if (state.allies && state.allies.length > 0) {
+    for (const a of state.allies) {
+      a.alliedTicksLeft--;
+      if (a.alliedTicksLeft <= 0) a.hp = 0;
+    }
+    state.allies = state.allies.filter(a => a.alliedTicksLeft > 0 && a.hp > 0);
+  }
+
+  // Reset attackedThisTurn (tactical perk)
+  if (p.attackedThisTurn) p.attackedThisTurn.clear();
+
+  // Sprinter — count combat-free turns
+  if (p.flags.sprinter) p.sprinterTicks = (p.sprinterTicks || 0) + 1;
+}
+
+// On enemy killed hook (called from various damage-dealers)
+function onEnemyKilled(e) {
+  // Necromancer F14: child enemies don't trigger ally summon
+  if (state.player.flags && state.player.flags.necromancer && !e.isChild && !e.child) {
+    if (state.allies.length === 0 && Math.random() < 0.30) {
+      e.allied = true;
+      e.alliedTicksLeft = 10;
+      e.hp = Math.max(1, Math.floor((e.maxHp || 8) * 0.5));
+      state.allies.push(e);
+      addMessage(`${e.name} rises as your ally!`, 'info');
+      spawnParticles(e.x, e.y, 18, '#a855f7', 2.5, 28);
+    }
+  }
+  // Dagger Dance: next attack guaranteed crit
+  if (state.player.flags && state.player.flags.daggerDance) {
+    state.player.flags.daggerDanceCharged = true;
+  }
+}
 
 // ─── PLATFORM DETECT ────────────────────────────
 const isMobile = /Android|iPhone|iPad|iPod|webOS/i.test(navigator.userAgent) || ('ontouchstart' in window && window.innerWidth < 900);
@@ -665,14 +1754,43 @@ function newState() {
     explored: [],
     visible: new Set(),
     rooms: [],
-    player: { x: 0, y: 0, hp: 25, maxHp: 25, atk: 4, def: 1, level: 1, xp: 0, xpNext: 15 },
+    player: {
+      x: 0, y: 0, hp: 25, maxHp: 25, atk: 4, def: 1, level: 1, xp: 0, xpNext: 15,
+      baseAtk: 4, baseDef: 1, baseMaxHp: 25, baseSpeed: SPEED.NORMAL,
+      energy: 0, speed: SPEED.NORMAL, movementPattern: MOVE_PATTERN.ORTHOGONAL,
+      statusEffects: [], torchBonus: 0, poisoned: 0,
+      // PLAN 05 — card-applied stats
+      critChance: 0, dodgeChance: 0, lifestealPct: 0, accuracyBonus: 0, dmgReduction: 0,
+      flags: {}, // arbitrary perk flags (fireAura, iceAura, regen, sprinter, dualWield, tactical, etc.)
+      attackedThisTurn: new Set(), // for tactical perk
+      sprinterTicks: 0,            // tracks turns without combat
+      lastStepX: 0, lastStepY: 0,  // for tempest tornado spawn
+      equipment: { weapon: null, armor: null, offhand: null, accessory1: null, accessory2: null },
+    },
+    cards: [],            // [{ id, stacks }]
+    activeSkills: [],     // [{ id, cdRemaining, slot }] — slot 0 = Q, 1 = E
+    pendingCardChoices: null, // { choices: [cardDef, ...], remaining: N }
+    pendingLevelups: 0,
+    choosingCard: false,
+    pityCounter: 0,
+    cardRerolls: 0,
+    allies: [],           // necromancer summons (ttl-based)
+    tornadoes: [],        // tempest tiles { x, y, ttl }
     enemies: [],
     items: [],       // items on ground
     inventory: [],    // player inventory
     groundItems: [],  // items on the floor of current level
+    traps: [],
+    litRooms: new Set(),
+    anvils: [],
+    webTiles: [],
+    worldTick: 0,
     floor: 1,
     turns: 0,
     kills: 0,
+    gold: 0,
+    nextItemId: 0,
+    nextEnemyId: 0,
     stairsPos: { x: 0, y: 0 },
     torches: [],
     messages: [],
@@ -683,6 +1801,216 @@ function newState() {
     screenShake: 0,
     seed: Math.floor(Math.random() * 999999),
   };
+}
+
+// ─── ITEM HELPERS ──────────────────────────────
+function findItemDef(id) {
+  return ITEM_DEFS.find(d => d.id === id);
+}
+
+function makeItemInstance(def, extra) {
+  const inst = { ...def };
+  if (def.maxDur != null) {
+    inst.dur = def.maxDur;
+    inst.maxDur = def.maxDur;
+  }
+  inst.instanceId = ++state.nextItemId;
+  if (extra) Object.assign(inst, extra);
+  return inst;
+}
+
+function pickWeightedItem(floor, predicate) {
+  const eligible = ITEM_DEFS.filter(d => (d.minFloor || 1) <= floor && (!predicate || predicate(d)));
+  if (eligible.length === 0) return null;
+  const totalW = eligible.reduce((s, d) => s + (d.weight || 1), 0);
+  let r = Math.random() * totalW;
+  for (const d of eligible) {
+    r -= (d.weight || 1);
+    if (r <= 0) return d;
+  }
+  return eligible[eligible.length - 1];
+}
+
+function getEquippedWeapon() { return state.player.equipment.weapon; }
+function getEquippedArmor()  { return state.player.equipment.armor; }
+function getEquippedOffhand(){ return state.player.equipment.offhand; }
+
+function getAccessoryAtk() {
+  let a = 0;
+  for (const k of ['accessory1','accessory2']) {
+    const it = state.player.equipment[k];
+    if (it) a += it.atk || 0;
+  }
+  return a;
+}
+
+function getAccessoryDef() {
+  let d = 0;
+  for (const k of ['accessory1','accessory2']) {
+    const it = state.player.equipment[k];
+    if (it) d += it.def || 0;
+  }
+  return d;
+}
+
+function getAccessoryMaxHpBonus() {
+  let h = 0;
+  for (const k of ['accessory1','accessory2']) {
+    const it = state.player.equipment[k];
+    if (it) h += it.maxHp || 0;
+  }
+  return h;
+}
+
+function getStatusAtkBonus() {
+  return 0; // hook for future buffs
+}
+
+function getStatusDefBonus() {
+  return 0; // hook for future buffs
+}
+
+function getPlayerAtk() {
+  let a = state.player.atk; // base
+  const w = getEquippedWeapon();
+  if (w && (w.dur === undefined || w.dur > 0)) a += w.atk || 0;
+  a += getAccessoryAtk();
+  a += getStatusAtkBonus();
+  // PLAN 05: a += getCardBonus('atk');
+  return a;
+}
+
+function getPlayerDef() {
+  let d = state.player.def; // base
+  const a = getEquippedArmor();
+  if (a && (a.dur === undefined || a.dur > 0)) d += a.def || 0;
+  const o = getEquippedOffhand();
+  if (o && (o.dur === undefined || o.dur > 0)) d += o.def || 0;
+  d += getAccessoryDef();
+  d += getStatusDefBonus();
+  // PLAN 05: d += getCardBonus('def');
+  return d;
+}
+
+function getPlayerCritChance() {
+  let c = 0.05;
+  const w = getEquippedWeapon();
+  if (w && w.critChance) c = w.critChance;
+  for (const k of ['accessory1','accessory2']) {
+    const it = state.player.equipment[k];
+    if (it && it.critBonus) c += it.critBonus;
+  }
+  return c;
+}
+
+function damageWeaponDur(w, isCrit) {
+  if (!w || w.dur == null || w.dur <= 0) return;
+  const wear = w.twoHanded ? 2 : 1;
+  w.dur = Math.max(0, w.dur - (isCrit ? wear * 3 : wear));
+  if (w.dur === 0) {
+    addMessage(`Your ${w.name} breaks!`, 'combat');
+    spawnFloatingText(state.player.x, state.player.y, '💔', '#ef4444');
+  } else if (w.dur <= w.maxDur * 0.2 && state.turns % 5 === 0) {
+    addMessage(`${w.emoji} is nearly broken!`, 'info');
+  }
+}
+
+function damageArmorDur(a, incoming) {
+  if (!a || a.dur == null || a.dur <= 0) return;
+  const wear = Math.max(1, Math.ceil(incoming / 3));
+  a.dur = Math.max(0, a.dur - wear);
+  if (a.dur === 0) {
+    addMessage(`Your ${a.name} crumbles!`, 'combat');
+  }
+}
+
+function equipItem(invSlot) {
+  const item = state.inventory[invSlot];
+  if (!item) return;
+  const slot = item.slot;
+  if (!slot || slot === null) return;
+
+  let targetSlot = slot;
+  if (slot === 'accessory') {
+    if (!state.player.equipment.accessory1) targetSlot = 'accessory1';
+    else if (!state.player.equipment.accessory2) targetSlot = 'accessory2';
+    else targetSlot = 'accessory1'; // swap with first
+  }
+
+  // Handle two-handed weapons — clear offhand
+  if (slot === 'weapon' && item.twoHanded) {
+    const oh = state.player.equipment.offhand;
+    if (oh) {
+      // Need a free slot for offhand
+      if (state.inventory.length >= CFG.INV_SIZE) {
+        addMessage('Free a slot first (two-handed needs offhand cleared).', 'info');
+        return;
+      }
+      state.inventory.push(oh);
+      state.player.equipment.offhand = null;
+    }
+  }
+  // Handle offhand when wielding two-handed
+  if (slot === 'offhand') {
+    const w = state.player.equipment.weapon;
+    if (w && w.twoHanded) {
+      addMessage(`Cannot equip ${item.name} — two-handed weapon in use.`, 'info');
+      return;
+    }
+  }
+
+  const old = state.player.equipment[targetSlot];
+  state.player.equipment[targetSlot] = item;
+  state.inventory[invSlot] = old || null;
+  if (!old) state.inventory.splice(invSlot, 1);
+  addMessage(`Equipped ${item.emoji} ${item.name}.`, 'pickup');
+  recomputePlayerMaxHp();
+}
+
+function unequipItem(slotName) {
+  const item = state.player.equipment[slotName];
+  if (!item) return;
+  if (state.inventory.length >= CFG.INV_SIZE) {
+    addMessage('Inventory full!', 'info');
+    return;
+  }
+  state.inventory.push(item);
+  state.player.equipment[slotName] = null;
+  addMessage(`Unequipped ${item.name}.`, 'info');
+  recomputePlayerMaxHp();
+}
+
+function recomputePlayerMaxHp() {
+  // PLAN 05: delegate to full recompute (cards + accessories + level scaling).
+  recomputeStats();
+}
+
+function repairAt(x, y) {
+  const a = state.anvils.find(an => an.x === x && an.y === y && !an.used);
+  if (!a) return;
+  let any = false;
+  for (const k of ['weapon','armor','offhand']) {
+    const it = state.player.equipment[k];
+    if (it && it.maxDur && it.dur < it.maxDur) {
+      it.dur = it.maxDur;
+      any = true;
+    }
+  }
+  if (!any) {
+    addMessage('Nothing to repair.', 'info');
+    return;
+  }
+  a.used = true;
+  state.map[y][x] = TILE.FLOOR;
+  addMessage('The anvil restores your gear!', 'pickup');
+  spawnParticles(x, y, 30, '#fbbf24', 3, 40);
+}
+
+function equipStartingGear() {
+  const dagger = findItemDef('rusty_dagger');
+  const robes = findItemDef('tattered_robes');
+  if (dagger) state.player.equipment.weapon = makeItemInstance(dagger);
+  if (robes)  state.player.equipment.armor  = makeItemInstance(robes);
 }
 
 function addMessage(text, type = 'info') {
@@ -755,7 +2083,83 @@ function generateDungeon(floor) {
   const stairsPos = { x: stairsRoom.cx, y: stairsRoom.cy };
   map[stairsPos.y][stairsPos.x] = TILE.STAIRS;
 
-  return { map, explored, rooms, playerStart: { x: playerRoom.cx, y: playerRoom.cy }, stairsPos, torches };
+  // ─── ANVIL ─────────────────────────────────
+  const anvils = [];
+  if (floor >= 3 && Math.random() < 0.5 && rooms.length > 2) {
+    // pick a room different from player and stairs
+    let attempts = 0;
+    while (attempts < 20) {
+      const idx = rand(1, rooms.length - 2);
+      const r = rooms[idx];
+      const ax = rand(r.x + 1, r.x + r.w - 2);
+      const ay = rand(r.y + 1, r.y + r.h - 2);
+      if (map[ay][ax] === TILE.FLOOR &&
+          !(ax === stairsPos.x && ay === stairsPos.y) &&
+          !(ax === playerRoom.cx && ay === playerRoom.cy)) {
+        map[ay][ax] = TILE.ANVIL;
+        anvils.push({ x: ax, y: ay, used: false });
+        break;
+      }
+      attempts++;
+    }
+  }
+
+  // ─── LIT ROOMS ─────────────────────────────
+  const litSet = new Set();
+  for (let i = 0; i < rooms.length; i++) {
+    const r = rooms[i];
+    r.lit = false;
+    const area = r.w * r.h;
+    let chance = CFG.LIT_ROOM_CHANCE;
+    if (area > CFG.LIT_ROOM_AREA_THRESHOLD) chance += 0.30;
+    if (i === 0 || i === rooms.length - 1) chance -= 0.10;
+    if (Math.random() < chance) {
+      r.lit = true;
+      litSet.add(i);
+    }
+  }
+  if (litSet.size < CFG.LIT_ROOM_MIN_PER_FLOOR && rooms.length > 2) {
+    const candidates = [];
+    for (let i = 1; i < rooms.length - 1; i++) if (!litSet.has(i)) candidates.push(i);
+    if (candidates.length > 0) {
+      const pick = candidates[rand(0, candidates.length - 1)];
+      rooms[pick].lit = true;
+      litSet.add(pick);
+    }
+  }
+
+  // ─── TRAPS ─────────────────────────────────
+  const traps = [];
+  const availableTraps = TRAP_DEFS.filter(t => t.minFloor <= floor);
+  if (availableTraps.length > 0) {
+    for (let i = 1; i < rooms.length; i++) {
+      const r = rooms[i];
+      if (Math.random() < CFG.TRAP_CHANCE_PER_ROOM) {
+        const def = availableTraps[rand(0, availableTraps.length - 1)];
+        const tx = rand(r.x + 1, r.x + r.w - 2);
+        const ty = rand(r.y + 1, r.y + r.h - 2);
+        if (tx === stairsPos.x && ty === stairsPos.y) continue;
+        if (traps.some(t => t.x === tx && t.y === ty)) continue;
+        traps.push({ ...def, x: tx, y: ty, revealed: false, triggered: false });
+      }
+    }
+    // corridor traps — only spike + pit
+    const corridorTrapDefs = availableTraps.filter(t => t.type === 'spike' || t.type === 'pit');
+    if (corridorTrapDefs.length > 0) {
+      for (let y = 0; y < h; y++) {
+        for (let x = 0; x < w; x++) {
+          if (map[y][x] !== TILE.CORRIDOR) continue;
+          if (Math.random() < CFG.TRAP_CHANCE_CORRIDOR) {
+            if (traps.some(t => t.x === x && t.y === y)) continue;
+            const def = corridorTrapDefs[rand(0, corridorTrapDefs.length - 1)];
+            traps.push({ ...def, x, y, revealed: false, triggered: false });
+          }
+        }
+      }
+    }
+  }
+
+  return { map, explored, rooms, playerStart: { x: playerRoom.cx, y: playerRoom.cy }, stairsPos, torches, litSet, traps, anvils };
 }
 
 function digCorridor(map, x1, y1, x2, y2) {
@@ -775,37 +2179,134 @@ function digCorridor(map, x1, y1, x2, y2) {
   }
 }
 
+function pickWeightedEnemy(floor) {
+  const eligible = ENEMY_DEFS.filter(d => {
+    const fr = d.floor || [d.minFloor || 1, 99];
+    return floor >= fr[0] && floor <= (fr[1] ?? 99) && !d.forceSpawn;
+  });
+  if (eligible.length === 0) return null;
+  const total = eligible.reduce((s, d) => s + (d.weight || 1), 0);
+  let r = Math.random() * total;
+  for (const d of eligible) {
+    r -= (d.weight || 1);
+    if (r <= 0) return d;
+  }
+  return eligible[eligible.length - 1];
+}
+
+function makeEnemyInstance(def, x, y, floor) {
+  const scale = 1 + (floor - 1) * 0.15;
+  return {
+    ...def,
+    id: ++state.nextEnemyId,
+    x, y,
+    hp: Math.floor(def.hp * scale),
+    maxHp: Math.floor(def.hp * scale),
+    atk: Math.floor(def.atk * scale),
+    def: Math.floor((def.def || 0) * scale),
+    awake: false,
+    energy: 0,
+    speed: def.speed,
+    movementPattern: def.movementPattern,
+    statusEffects: [],
+    zigzagPhase: 0,
+    state: def.ai === 'ambusher' ? 'HIDDEN' : (def.ai === 'mimic' ? 'DISGUISED' : 'ACTIVE'),
+    tpCounter: 0,
+    breathCd: 0,
+    charging: false,
+    revived: false,
+    vanished: false,
+    splitGen: def.splitGen || 0,
+    isChild: false,
+  };
+}
+
+function findFreeTileInRoom(room, occupied) {
+  for (let attempts = 0; attempts < 30; attempts++) {
+    const x = rand(room.x + 1, room.x + room.w - 2);
+    const y = rand(room.y + 1, room.y + room.h - 2);
+    if (state.map[y][x] !== TILE.FLOOR) continue;
+    if (occupied.some(o => o.x === x && o.y === y)) continue;
+    return { x, y };
+  }
+  return null;
+}
+
 function populateFloor(floor) {
   const enemies = [];
-  const items = [];
-  const available = ENEMY_DEFS.filter(e => e.minFloor <= floor);
+  let items = [];
 
+  // ─── ENEMIES ───
   for (let i = 1; i < state.rooms.length; i++) {
     const room = state.rooms[i];
     const numEnemies = rand(1, Math.min(3, 1 + Math.floor(floor / 2)));
     for (let j = 0; j < numEnemies; j++) {
-      const def = available[rand(0, available.length - 1)];
-      const ex = rand(room.x + 1, room.x + room.w - 2);
-      const ey = rand(room.y + 1, room.y + room.h - 2);
-      if (enemies.some(e => e.x === ex && e.y === ey)) continue;
-      const scale = 1 + (floor - 1) * 0.15;
-      enemies.push({
-        ...def,
-        x: ex, y: ey,
-        hp: Math.floor(def.hp * scale),
-        maxHp: Math.floor(def.hp * scale),
-        atk: Math.floor(def.atk * scale),
-        def: Math.floor(def.def * scale),
-        awake: false,
-      });
+      const def = pickWeightedEnemy(floor);
+      if (!def) continue;
+      const free = findFreeTileInRoom(room, enemies);
+      if (!free) continue;
+      enemies.push(makeEnemyInstance(def, free.x, free.y, floor));
     }
+  }
 
-    if (Math.random() < 0.5 + floor * 0.03) {
-      const avItems = floor < 4 ? ITEM_DEFS.slice(0, 5) : ITEM_DEFS;
-      const itemDef = avItems[rand(0, avItems.length - 1)];
-      const ix = rand(room.x + 1, room.x + room.w - 2);
-      const iy = rand(room.y + 1, room.y + room.h - 2);
-      items.push({ ...itemDef, x: ix, y: iy });
+  // Forced dragon spawn on floor 10
+  if (floor === 10) {
+    const dragonDef = ENEMY_DEFS.find(d => d.key === 'dragon');
+    if (dragonDef && !enemies.some(e => e.key === 'dragon')) {
+      const lastRoom = state.rooms[state.rooms.length - 1];
+      const free = findFreeTileInRoom(lastRoom, enemies);
+      if (free) enemies.push(makeEnemyInstance(dragonDef, free.x, free.y, floor));
+    }
+  }
+
+  // ─── ITEMS (per-room 2-3) ───
+  for (let i = 1; i < state.rooms.length; i++) {
+    const room = state.rooms[i];
+    const numItems = rand(2, 3);
+    for (let k = 0; k < numItems; k++) {
+      const def = pickWeightedItem(floor);
+      if (!def) continue;
+      const free = findFreeTileInRoom(room, [...enemies, ...items]);
+      if (!free) continue;
+      items.push(makeItemInstance(def, { x: free.x, y: free.y }));
+    }
+  }
+
+  // ─── MIMIC SUBSTITUTION (10% chance per item) ───
+  if (floor >= 3) {
+    const mimicDef = ENEMY_DEFS.find(d => d.key === 'mimic');
+    if (mimicDef) {
+      for (let k = items.length - 1; k >= 0; k--) {
+        if (Math.random() < 0.10) {
+          const it = items[k];
+          enemies.push(makeEnemyInstance(mimicDef, it.x, it.y, floor));
+          items.splice(k, 1);
+        }
+      }
+    }
+  }
+
+  // ─── ENSURE MIN (post-mimic so guarantees aren't replaced) ───
+  function ensureItemPredicate(predicate, defOrPicker) {
+    if (!items.some(predicate)) {
+      const room = state.rooms[rand(1, Math.max(1, state.rooms.length - 1))];
+      const free = findFreeTileInRoom(room, [...enemies, ...items]);
+      if (!free) return;
+      let def = (typeof defOrPicker === 'function') ? defOrPicker() : defOrPicker;
+      if (!def) return;
+      items.push(makeItemInstance(def, { x: free.x, y: free.y }));
+    }
+  }
+  ensureItemPredicate(i => i.type === 'weapon', () => pickWeightedItem(floor, d => d.type === 'weapon'));
+  ensureItemPredicate(i => i.type === 'armor',  () => pickWeightedItem(floor, d => d.type === 'armor'));
+  // 2x potions
+  for (let p = 0; p < 2; p++) {
+    if (items.filter(i => i.type === 'potion').length < 2) {
+      const room = state.rooms[rand(1, Math.max(1, state.rooms.length - 1))];
+      const free = findFreeTileInRoom(room, [...enemies, ...items]);
+      if (!free) break;
+      const def = pickWeightedItem(floor, d => d.type === 'potion') || findItemDef('herb');
+      if (def) items.push(makeItemInstance(def, { x: free.x, y: free.y }));
     }
   }
 
@@ -819,6 +2320,39 @@ const OCTANT_MULT = [
   [0, 1, 1, 0, 0, -1, -1, 0],
   [1, 0, 0, 1, -1, 0, 0, -1],
 ];
+
+function effectiveTorchRadius() {
+  return CFG.TORCH_RADIUS + (state.player.torchBonus || 0);
+}
+
+function getRoomAt(x, y) {
+  if (!state || !state.rooms) return null;
+  for (const r of state.rooms) {
+    if (x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h) return r;
+  }
+  return null;
+}
+
+function computePlayerFOV() {
+  const visible = computeFOV(state.player.x, state.player.y, effectiveTorchRadius());
+  const room = getRoomAt(state.player.x, state.player.y);
+  if (room && room.lit) {
+    for (let dy = 0; dy < room.h; dy++) {
+      for (let dx = 0; dx < room.w; dx++) {
+        visible.add(key(room.x + dx, room.y + dy));
+      }
+    }
+    // perimeter walls
+    for (let dy = -1; dy <= room.h; dy++) {
+      for (let dx = -1; dx <= room.w; dx++) {
+        const tx = room.x + dx, ty = room.y + dy;
+        if (ty < 0 || ty >= CFG.MAP_H || tx < 0 || tx >= CFG.MAP_W) continue;
+        if (state.map[ty] && state.map[ty][tx] === TILE.WALL) visible.add(key(tx, ty));
+      }
+    }
+  }
+  return visible;
+}
 
 function computeFOV(cx, cy, radius) {
   const visible = new Set();
@@ -918,8 +2452,11 @@ function addMoveAnim(entity, fromX, fromY) {
 // ─── GAME LOGIC ─────────────────────────────────
 function initGame() {
   state = newState();
+  equipStartingGear();
+  recomputeStats(); // PLAN 05 — initial baseline
   enterFloor(1);
   addMessage('You descend into the Obsidian Depths...', 'descend');
+  addMessage('You start with a Rusty Dagger 🗡️ and Tattered Robes 🥋.', 'info');
 }
 
 function enterFloor(floor) {
@@ -930,15 +2467,21 @@ function enterFloor(floor) {
   state.rooms = dungeon.rooms;
   state.stairsPos = dungeon.stairsPos;
   state.torches = dungeon.torches;
+  state.traps = dungeon.traps || [];
+  state.litRooms = dungeon.litSet || new Set();
+  state.anvils = dungeon.anvils || [];
+  state.webTiles = [];
   state.player.x = dungeon.playerStart.x;
   state.player.y = dungeon.playerStart.y;
+  state.player.energy = 0;
+  state.player.poisoned = 0;
   state.camera.x = state.player.x;
   state.camera.y = state.player.y;
 
   const pop = populateFloor(floor);
   state.enemies = pop.enemies;
   state.groundItems = pop.items;
-  state.visible = computeFOV(state.player.x, state.player.y, CFG.FOV_RADIUS);
+  state.visible = computePlayerFOV();
   markExplored();
 }
 
@@ -949,10 +2492,20 @@ function markExplored() {
       state.explored[y][x] = 1;
     }
   }
+  // Reveal traps in current FOV
+  if (state.traps) {
+    for (const trap of state.traps) {
+      if (!trap.revealed && !trap.triggered && state.visible.has(key(trap.x, trap.y))) {
+        trap.revealed = true;
+      }
+    }
+  }
 }
 
 function tryMove(dx, dy) {
   if (gamePhase !== 'playing') return;
+  if (state.choosingCard) return; // PLAN 05 — modal blocks input
+  if (dx === 0 && dy === 0) return;
 
   const nx = state.player.x + dx;
   const ny = state.player.y + dy;
@@ -960,10 +2513,16 @@ function tryMove(dx, dy) {
   if (nx < 0 || nx >= CFG.MAP_W || ny < 0 || ny >= CFG.MAP_H) return;
   if (state.map[ny][nx] === TILE.WALL) return;
 
+  // Pattern check — player is ORTHOGONAL by default (cards may add OMNI later)
+  const candidates = getCandidateMoves(state.player.movementPattern, 0);
+  const allowed = candidates.some(c => c.dx === dx && c.dy === dy);
+  if (!allowed) return;
+
   const enemy = state.enemies.find(e => e.x === nx && e.y === ny && e.hp > 0);
   if (enemy) {
     attackEnemy(enemy);
-    endTurn();
+    state.player.energy -= ACTION_COST.ATTACK;
+    processWorld();
     return;
   }
 
@@ -972,34 +2531,178 @@ function tryMove(dx, dy) {
   state.player.y = ny;
   addMoveAnim(state.player, oldX, oldY);
 
+  // PLAN 05 — Tempest: drop tornado at old tile
+  if (state.player.flags && state.player.flags.tempest) {
+    state.tornadoes.push({ x: oldX, y: oldY, ttl: 5 });
+  }
+
+  // Trap check after move
+  const trap = state.traps.find(t => t.x === nx && t.y === ny && !t.triggered);
+  if (trap) triggerTrap(trap);
+
+  // PLAN 05 — Magnetic: auto-pickup in r3
+  if (state.player.flags && state.player.flags.magnetic) {
+    for (let i = state.groundItems.length - 1; i >= 0; i--) {
+      const it = state.groundItems[i];
+      if (dist(it.x, it.y, state.player.x, state.player.y) <= 3) {
+        if (state.inventory.length < CFG.INV_SIZE) {
+          state.inventory.push(it);
+          state.groundItems.splice(i, 1);
+          addMessage(`Picked up ${it.emoji || ''} ${it.name}.`, 'pickup');
+          spawnParticles(state.player.x, state.player.y, 6, '#fbbf24', 1.5, 14);
+        }
+      }
+    }
+  }
+
   if (isMobile) autoPickup();
-  endTurn();
+  state.player.energy -= ACTION_COST.MOVE;
+  processWorld();
 }
 
 function attackEnemy(enemy) {
-  const dmg = Math.max(1, state.player.atk - enemy.def + rand(-1, 1));
+  // Mimic reveal on attack
+  if (enemy.state === 'DISGUISED') {
+    enemy.state = 'ACTIVE';
+    enemy.awake = true;
+    addMessage('It was a mimic!', 'combat');
+  }
+  // Bat dodge
+  if (enemy.dodge && enemy.hp / enemy.maxHp < 0.5 && Math.random() < enemy.dodge) {
+    spawnFloatingText(enemy.x, enemy.y, 'miss', '#94a3b8');
+    return;
+  }
+  // Ghost vanished — untargetable
+  if (enemy.vanished) {
+    spawnFloatingText(enemy.x, enemy.y, 'phased', '#cbd5e1');
+    return;
+  }
+
+  // PLAN 05: card mods
+  const p = state.player;
+  const flags = p.flags || {};
+  // sprinter: combat resets timer
+  if (flags.sprinter) p.sprinterTicks = 0;
+
+  let isCrit = Math.random() < getPlayerCritChance();
+  // Dagger Dance: charged crit
+  if (flags.daggerDanceCharged) { isCrit = true; flags.daggerDanceCharged = false; }
+  const baseAtk = getPlayerAtk();
+  // Accuracy: reduce variance lower-bound
+  const variance = (p.accuracyBonus && p.accuracyBonus > 0) ? rand(0, 1) : rand(-1, 1);
+  let dmg = Math.max(1, baseAtk - (enemy.def || 0) + variance);
+
+  // Weapon-type synergies
+  const wt = getWeaponType();
+  if (flags.swordMastery && (wt === 'sword' || wt === 'dagger')) dmg = Math.floor(dmg * 1.3);
+  if (flags.marksman && wt === 'bow') {
+    dmg = Math.floor(dmg * 1.5) + Math.floor((enemy.def || 0) * 0.5);
+  }
+  if (flags.berserker && wt === 'axe' && p.hp / p.maxHp < 0.5) dmg = Math.floor(dmg * 2);
+  if (flags.maceCrusher && (wt === 'hammer' || wt === 'mace')) dmg += (enemy.def || 0); // ignore DEF
+  if (flags.dragonsBlood && (enemy.key === 'dragon' || enemy.key === 'demon' || enemy.key === 'golem')) {
+    dmg = Math.floor(dmg * 1.5);
+  }
+
+  // Tactical: first hit on enemy this turn
+  if (flags.tactical && p.attackedThisTurn && !p.attackedThisTurn.has(enemy)) {
+    dmg = Math.floor(dmg * 1.5);
+  }
+  if (p.attackedThisTurn) p.attackedThisTurn.add(enemy);
+
+  if (isCrit) dmg = dmg * 2;
   enemy.hp -= dmg;
-  spawnParticles(enemy.x, enemy.y, 8, '#f87171', 2.5, 20);
-  spawnFloatingText(enemy.x, enemy.y, `-${dmg}`, '#f87171');
-  state.screenShake = 4;
+
+  // Lifesteal
+  if (p.lifestealPct > 0) {
+    const heal = Math.max(1, Math.floor(dmg * p.lifestealPct));
+    p.hp = Math.min(p.maxHp, p.hp + heal);
+    spawnFloatingText(p.x, p.y, `+${heal}`, '#dc2626');
+  }
+
+  spawnParticles(enemy.x, enemy.y, 8, isCrit ? '#fbbf24' : '#f87171', 2.5, 20);
+  spawnFloatingText(enemy.x, enemy.y, isCrit ? `CRIT -${dmg}` : `-${dmg}`, isCrit ? '#fbbf24' : '#f87171');
+  state.screenShake = isCrit ? 6 : 4;
+
+  // Weapon durability tick
+  damageWeaponDur(getEquippedWeapon(), isCrit);
+
+  // Doppelganger / Dual Wield: chance for second strike
+  let secondStrike = false;
+  if (flags.doppelganger && Math.random() < 0.25) secondStrike = true;
+  else if (flags.dualWield && Math.random() < 0.25) secondStrike = true;
 
   if (enemy.hp <= 0) {
     addMessage(`You slay the ${enemy.name}! (+${enemy.xp} XP)`, 'combat');
     state.kills++;
-    spawnParticles(enemy.x, enemy.y, 20, enemy.color, 3, 35);
+    spawnParticles(enemy.x, enemy.y, 20, enemy.color || '#ef4444', 3, 35);
     gainXP(enemy.xp);
+    onEnemyKilled(enemy);
   } else {
     addMessage(`You hit the ${enemy.name} for ${dmg} damage.`, 'combat');
+    if (secondStrike) {
+      const dmg2 = Math.max(1, Math.floor(dmg * 0.5));
+      enemy.hp -= dmg2;
+      spawnFloatingText(enemy.x, enemy.y, `+${dmg2}`, '#a78bfa');
+      if (enemy.hp <= 0) {
+        addMessage(`Second strike kills the ${enemy.name}!`, 'combat');
+        state.kills++;
+        gainXP(enemy.xp);
+        onEnemyKilled(enemy);
+      }
+    }
   }
 }
 
 function enemyAttack(enemy) {
-  const dmg = Math.max(1, enemy.atk - state.player.def + rand(-1, 1));
+  const p = state.player;
+  const flags = p.flags || {};
+
+  // PLAN 05: Cat Reflexes / dodge chance
+  if (p.dodgeChance && Math.random() < p.dodgeChance) {
+    spawnFloatingText(p.x, p.y, 'DODGE', '#22d3ee');
+    return;
+  }
+
+  const incoming = Math.max(1, enemy.atk + rand(-1, 1));
+  const ignoreDef = enemy.ignoresDef === true;
+  const totalDef = ignoreDef ? 0 : getPlayerDef();
+
+  // Offhand block
+  const oh = getEquippedOffhand();
+  if (oh && oh.dur > 0 && oh.blockChance && Math.random() < oh.blockChance) {
+    addMessage(`You block the ${enemy.name}'s attack!`, 'combat');
+    spawnFloatingText(state.player.x, state.player.y, 'BLOCK', '#60a5fa');
+    if (!flags.mythrilBody) damageArmorDur(oh, incoming);
+    return;
+  }
+
+  let dmg = Math.max(1, incoming - totalDef);
+  // Resilient Aura: -1 dmg
+  if (flags.resilientAura) dmg = Math.max(1, dmg - 1);
+  // Mythril Body: -2 dmg
+  if (flags.mythrilBody) dmg = Math.max(1, dmg - 2);
+  // Endurance: % reduction
+  if (p.dmgReduction > 0) dmg = Math.max(1, Math.ceil(dmg * (1 - p.dmgReduction)));
   state.player.hp -= dmg;
+  if (flags.sprinter) p.sprinterTicks = 0;
   spawnParticles(state.player.x, state.player.y, 6, '#ef4444', 2, 18);
   spawnFloatingText(state.player.x, state.player.y, `-${dmg}`, '#ef4444');
   state.screenShake = 3;
   addMessage(`The ${enemy.name} hits you for ${dmg} damage!`, 'combat');
+
+  // Armor durability tick (Mythril Body skips wear)
+  if (!flags.mythrilBody) damageArmorDur(getEquippedArmor(), incoming);
+
+  // Status effect emit
+  if (enemy.poison) addStatusEffect(state.player, STATUS.POISON, enemy.poison.ticks, enemy.poison.dmg);
+  if (enemy.bleed)  addStatusEffect(state.player, STATUS.BLEED,  enemy.bleed.ticks,  enemy.bleed.dmg);
+  if (enemy.ai === 'xpdrainer' && enemy.drainXp) {
+    const drained = Math.min(state.player.xp, enemy.drainXp);
+    state.player.xp -= drained;
+    enemy.hp = Math.min(enemy.maxHp, enemy.hp + drained);
+    spawnFloatingText(state.player.x, state.player.y, `-${drained} XP`, '#c084fc');
+  }
 
   if (state.player.hp <= 0) {
     state.player.hp = 0;
@@ -1009,65 +2712,103 @@ function enemyAttack(enemy) {
 }
 
 function gainXP(amount) {
+  // Bone collector bonus (perk) — handled at call sites where enemy is known is hard;
+  // simplest: caller pre-multiplies. We can't detect bone enemies here so we leave callers as-is.
   state.player.xp += amount;
   while (state.player.xp >= state.player.xpNext) {
     state.player.xp -= state.player.xpNext;
     state.player.level++;
-    state.player.maxHp += 6;
-    state.player.hp = Math.min(state.player.hp + 6, state.player.maxHp);
-    state.player.atk += 1;
-    state.player.def += 1;
     state.player.xpNext = Math.floor(state.player.xpNext * 1.5);
     addMessage(`Level up! You are now level ${state.player.level}!`, 'level');
     spawnParticles(state.player.x, state.player.y, 25, '#c084fc', 3, 30);
+    // PLAN 05 — refactor: replace hardcoded +6/+1/+1 with card draft.
+    // Level scaling for maxHp is preserved via recomputeStats (baseMaxHp + (level-1)*6).
+    queueLevelupChoice();
   }
+  recomputeStats();
+}
+
+function tryAutoEquip(item) {
+  // Returns true if item was directly equipped (slot was empty)
+  if (item.type === 'weapon' && !state.player.equipment.weapon) {
+    state.player.equipment.weapon = item; return true;
+  }
+  if (item.type === 'armor' && !state.player.equipment.armor) {
+    state.player.equipment.armor = item; return true;
+  }
+  if (item.type === 'offhand' && !state.player.equipment.offhand) {
+    const w = state.player.equipment.weapon;
+    if (w && w.twoHanded) return false;
+    state.player.equipment.offhand = item; return true;
+  }
+  if (item.type === 'accessory') {
+    if (!state.player.equipment.accessory1) { state.player.equipment.accessory1 = item; recomputePlayerMaxHp(); return true; }
+    if (!state.player.equipment.accessory2) { state.player.equipment.accessory2 = item; recomputePlayerMaxHp(); return true; }
+  }
+  return false;
 }
 
 function autoPickup() {
   const idx = state.groundItems.findIndex(i => i.x === state.player.x && i.y === state.player.y);
-  if (idx === -1 || state.inventory.length >= CFG.INV_SIZE) return;
-  const item = state.groundItems.splice(idx, 1)[0];
+  if (idx === -1) return;
+  const item = state.groundItems[idx];
+  if (tryAutoEquip(item)) {
+    state.groundItems.splice(idx, 1);
+    addMessage(`Equipped ${item.emoji || ''} ${item.name}.`, 'pickup');
+    spawnParticles(state.player.x, state.player.y, 10, item.color || '#fbbf24', 2, 20);
+    return;
+  }
+  if (state.inventory.length >= CFG.INV_SIZE) return;
+  state.groundItems.splice(idx, 1);
   state.inventory.push(item);
-  addMessage(`Picked up ${item.name}.`, 'pickup');
-  spawnParticles(state.player.x, state.player.y, 10, item.color, 2, 20);
+  addMessage(`Picked up ${item.emoji || ''} ${item.name}.`, 'pickup');
+  spawnParticles(state.player.x, state.player.y, 10, item.color || '#fbbf24', 2, 20);
 }
 
 function pickupItem() {
   const idx = state.groundItems.findIndex(i => i.x === state.player.x && i.y === state.player.y);
   if (idx === -1) { addMessage('Nothing to pick up here.', 'info'); return; }
+  const item = state.groundItems[idx];
+  if (tryAutoEquip(item)) {
+    state.groundItems.splice(idx, 1);
+    addMessage(`Equipped ${item.emoji || ''} ${item.name}.`, 'pickup');
+    spawnParticles(state.player.x, state.player.y, 10, item.color || '#fbbf24', 2, 20);
+    return;
+  }
   if (state.inventory.length >= CFG.INV_SIZE) { addMessage('Inventory full!', 'info'); return; }
 
-  const item = state.groundItems.splice(idx, 1)[0];
+  state.groundItems.splice(idx, 1);
   state.inventory.push(item);
-  addMessage(`Picked up ${item.name}.`, 'pickup');
-  spawnParticles(state.player.x, state.player.y, 10, item.color, 2, 20);
+  addMessage(`Picked up ${item.emoji || ''} ${item.name}.`, 'pickup');
+  spawnParticles(state.player.x, state.player.y, 10, item.color || '#fbbf24', 2, 20);
 }
 
 function useItem(slot) {
   if (slot >= state.inventory.length) return;
   const item = state.inventory[slot];
+  if (!item) return;
 
+  // Equippable items → equip
+  if (item.type === 'weapon' || item.type === 'armor' || item.type === 'offhand' || item.type === 'accessory') {
+    equipItem(slot);
+    state.player.energy -= ACTION_COST.WAIT;
+    processWorld();
+    return;
+  }
+
+  let consumed = true;
   if (item.effect === 'heal') {
     const healed = Math.min(item.value, state.player.maxHp - state.player.hp);
     state.player.hp += healed;
     addMessage(`Used ${item.name}. Healed ${healed} HP.`, 'pickup');
     spawnParticles(state.player.x, state.player.y, 12, '#34d399', 2, 25);
-  } else if (item.effect === 'str') {
-    state.player.atk += item.value;
-    addMessage(`Used ${item.name}. Attack +${item.value}!`, 'level');
-    spawnParticles(state.player.x, state.player.y, 15, '#ef4444', 2, 25);
-  } else if (item.effect === 'def') {
-    state.player.def += item.value;
-    addMessage(`Equipped ${item.name}. Defense +${item.value}!`, 'level');
-  } else if (item.effect === 'atk') {
-    state.player.atk += item.value;
-    addMessage(`Equipped ${item.name}. Attack +${item.value}!`, 'level');
   } else if (item.effect === 'fireball') {
     addMessage(`The scroll erupts in flames!`, 'combat');
     state.enemies.forEach(e => {
       if (e.hp > 0 && state.visible.has(key(e.x, e.y))) {
         const d = dist(state.player.x, state.player.y, e.x, e.y);
         if (d <= 5) {
+          if (e.vanished) return;
           const dmg = Math.max(1, item.value - Math.floor(d));
           e.hp -= dmg;
           spawnParticles(e.x, e.y, 12, '#f97316', 3, 25);
@@ -1075,6 +2816,7 @@ function useItem(slot) {
           if (e.hp <= 0) {
             state.kills++;
             gainXP(e.xp);
+            onEnemyKilled(e);
             addMessage(`The ${e.name} burns to ash!`, 'combat');
           }
         }
@@ -1089,13 +2831,24 @@ function useItem(slot) {
     spawnParticles(ox, oy, 15, '#38bdf8', 3, 20);
     spawnParticles(state.player.x, state.player.y, 15, '#38bdf8', 3, 20);
     addMessage('You blink to a new location!', 'info');
+  } else if (item.effect === 'unlock') {
+    addMessage(`${item.name}: nothing to unlock here.`, 'info');
+    consumed = false;
+  } else {
+    consumed = false;
   }
 
-  state.inventory.splice(slot, 1);
-  endTurn();
+  if (consumed) state.inventory.splice(slot, 1);
+  state.player.energy -= ACTION_COST.WAIT;
+  processWorld();
 }
 
 function descendStairs() {
+  // PLAN 05: block while choosing card / pending levelups
+  if (state.choosingCard || (state.pendingLevelups && state.pendingLevelups > 0)) {
+    addMessage('Choose your card first!', 'info');
+    return;
+  }
   if (state.player.x !== state.stairsPos.x || state.player.y !== state.stairsPos.y) {
     addMessage('No stairs here.', 'info');
     return;
@@ -1112,50 +2865,843 @@ function descendStairs() {
   addMessage(`You descend to floor ${state.floor}...`, 'descend');
 }
 
-function endTurn() {
-  state.turns++;
-  state.visible = computeFOV(state.player.x, state.player.y, CFG.FOV_RADIUS);
-  markExplored();
+// ─── TURN ENGINE ────────────────────────────────
+function getCandidateMoves(pattern, zigzagPhase) {
+  switch (pattern) {
+    case MOVE_PATTERN.ORTHOGONAL:
+      return [{dx:0,dy:-1},{dx:0,dy:1},{dx:-1,dy:0},{dx:1,dy:0}];
+    case MOVE_PATTERN.DIAGONAL:
+      return [{dx:-1,dy:-1},{dx:1,dy:-1},{dx:-1,dy:1},{dx:1,dy:1}];
+    case MOVE_PATTERN.OMNIDIRECTIONAL:
+      return [
+        {dx:0,dy:-1},{dx:0,dy:1},{dx:-1,dy:0},{dx:1,dy:0},
+        {dx:-1,dy:-1},{dx:1,dy:-1},{dx:-1,dy:1},{dx:1,dy:1},
+      ];
+    case MOVE_PATTERN.KNIGHT:
+      return [
+        {dx:1,dy:2},{dx:2,dy:1},{dx:-1,dy:2},{dx:-2,dy:1},
+        {dx:1,dy:-2},{dx:2,dy:-1},{dx:-1,dy:-2},{dx:-2,dy:-1},
+      ];
+    case MOVE_PATTERN.LEAP:
+      return [{dx:0,dy:-2},{dx:0,dy:2},{dx:-2,dy:0},{dx:2,dy:0}];
+    case MOVE_PATTERN.ZIGZAG:
+      return zigzagPhase % 2 === 0
+        ? [{dx:-1,dy:-1},{dx:1,dy:-1},{dx:-1,dy:1},{dx:1,dy:1}]
+        : [{dx:0,dy:-1},{dx:0,dy:1},{dx:-1,dy:0},{dx:1,dy:0}];
+    default:
+      return [{dx:0,dy:-1},{dx:0,dy:1},{dx:-1,dy:0},{dx:1,dy:0}];
+  }
+}
 
-  const alive = state.enemies.filter(e => e.hp > 0);
-  for (const e of alive) {
-    if (state.visible.has(key(e.x, e.y))) e.awake = true;
-    if (!e.awake) continue;
+function stepTowardWithPattern(ex, ey, px, py, pattern, zigzagPhase, otherEnemies) {
+  const candidates = getCandidateMoves(pattern, zigzagPhase);
+  const skipsWalls = (pattern === MOVE_PATTERN.KNIGHT || pattern === MOVE_PATTERN.LEAP);
 
-    const d = dist(e.x, e.y, state.player.x, state.player.y);
-    if (d <= 1.5) {
+  let best = null;
+  let bestDist = Infinity;
+  let anyValid = false;
+
+  for (const c of candidates) {
+    const nx = ex + c.dx, ny = ey + c.dy;
+    if (nx < 0 || nx >= CFG.MAP_W || ny < 0 || ny >= CFG.MAP_H) continue;
+    if (state.map[ny][nx] === TILE.WALL) continue;
+    if (nx === px && ny === py) continue; // can't step onto player (attack handled separately)
+    if (otherEnemies.some(e => e.x === nx && e.y === ny && !(e.x === ex && e.y === ey) && e.hp > 0)) continue;
+    anyValid = true;
+    const d = dist(nx, ny, px, py);
+    if (d < bestDist) {
+      bestDist = d;
+      best = { x: nx, y: ny, newZigzagPhase: (zigzagPhase || 0) + 1 };
+    }
+  }
+
+  if (best) return best;
+
+  // Fallback: non-orthogonal pattern with no valid candidates → try ORTHOGONAL
+  if (pattern !== MOVE_PATTERN.ORTHOGONAL) {
+    return stepTowardWithPattern(ex, ey, px, py, MOVE_PATTERN.ORTHOGONAL, zigzagPhase, otherEnemies);
+  }
+
+  return null;
+}
+
+function isAdjacentForAttack(att, tgt) {
+  const ax = Math.abs(att.x - tgt.x);
+  const ay = Math.abs(att.y - tgt.y);
+  if (att.movementPattern === MOVE_PATTERN.ORTHOGONAL) {
+    return (ax + ay) <= 1 && (ax + ay) > 0;
+  }
+  return Math.max(ax, ay) <= 1 && (ax + ay) > 0;
+}
+
+// ─── AI HELPERS ──────────────────────────────
+function chebyshev(a, b) { return Math.max(Math.abs(a.x - b.x), Math.abs(a.y - b.y)); }
+function manhattan(a, b) { return Math.abs(a.x - b.x) + Math.abs(a.y - b.y); }
+function sign(n) { return n > 0 ? 1 : (n < 0 ? -1 : 0); }
+function sameRowOrCol(a, b) { return a.x === b.x || a.y === b.y; }
+
+function lineOfSight(a, b) {
+  // Bresenham; allow endpoint walls but block on intermediate walls.
+  let x0 = a.x | 0, y0 = a.y | 0, x1 = b.x | 0, y1 = b.y | 0;
+  const dx = Math.abs(x1 - x0), dy = Math.abs(y1 - y0);
+  const sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1;
+  let err = dx - dy;
+  let first = true;
+  while (true) {
+    if (!first && !(x0 === x1 && y0 === y1)) {
+      if (x0 < 0 || x0 >= CFG.MAP_W || y0 < 0 || y0 >= CFG.MAP_H) return false;
+      if (state.map[y0][x0] === TILE.WALL) return false;
+    }
+    first = false;
+    if (x0 === x1 && y0 === y1) return true;
+    const e2 = err * 2;
+    if (e2 > -dy) { err -= dy; x0 += sx; }
+    if (e2 <  dx) { err += dx; y0 += sy; }
+  }
+}
+
+function fleeDirection(e, target) {
+  const candidates = getCandidateMoves(e.movementPattern || MOVE_PATTERN.ORTHOGONAL, e.zigzagPhase || 0);
+  let best = null, bestDist = -1;
+  for (const c of candidates) {
+    const nx = e.x + c.dx, ny = e.y + c.dy;
+    if (nx < 0 || nx >= CFG.MAP_W || ny < 0 || ny >= CFG.MAP_H) continue;
+    if (state.map[ny][nx] === TILE.WALL) continue;
+    if (nx === state.player.x && ny === state.player.y) continue;
+    if (state.enemies.some(o => o !== e && o.x === nx && o.y === ny && o.hp > 0)) continue;
+    const d = chebyshev({ x: nx, y: ny }, target);
+    if (d > bestDist) { bestDist = d; best = { x: nx, y: ny }; }
+  }
+  return best;
+}
+
+function nearestAlly(e, predicate, range) {
+  let best = null, bestDist = Infinity;
+  for (const a of state.enemies) {
+    if (a === e || a.hp <= 0) continue;
+    if (predicate && !predicate(a)) continue;
+    const d = chebyshev(e, a);
+    if (range && d > range) continue;
+    if (d < bestDist) { bestDist = d; best = a; }
+  }
+  return best;
+}
+
+function tilesAround(p, r) {
+  const tiles = [];
+  for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
+    if (dx === 0 && dy === 0) continue;
+    const x = p.x + dx, y = p.y + dy;
+    if (x < 0 || x >= CFG.MAP_W || y < 0 || y >= CFG.MAP_H) continue;
+    if (Math.max(Math.abs(dx), Math.abs(dy)) > r) continue;
+    tiles.push({ x, y });
+  }
+  return tiles;
+}
+
+function coneTiles(origin, dir, len) {
+  const out = [];
+  const horiz = Math.abs(dir.x) >= Math.abs(dir.y);
+  for (let i = 1; i <= len; i++) {
+    if (horiz) {
+      const cx = origin.x + dir.x * i;
+      for (let j = -i; j <= i; j++) {
+        const cy = origin.y + j;
+        if (cx < 0 || cx >= CFG.MAP_W || cy < 0 || cy >= CFG.MAP_H) continue;
+        out.push({ x: cx, y: cy });
+      }
+    } else {
+      const cy = origin.y + dir.y * i;
+      for (let j = -i; j <= i; j++) {
+        const cx = origin.x + j;
+        if (cx < 0 || cx >= CFG.MAP_W || cy < 0 || cy >= CFG.MAP_H) continue;
+        out.push({ x: cx, y: cy });
+      }
+    }
+  }
+  return out;
+}
+
+function randomFloorTileNear(p, r, exclude) {
+  const opts = [];
+  for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
+    const x = p.x + dx, y = p.y + dy;
+    if (x < 0 || x >= CFG.MAP_W || y < 0 || y >= CFG.MAP_H) continue;
+    if (Math.max(Math.abs(dx), Math.abs(dy)) > r || (dx === 0 && dy === 0)) continue;
+    const t = state.map[y][x];
+    if (t !== TILE.FLOOR && t !== TILE.CORRIDOR && t !== TILE.STAIRS) continue;
+    if (exclude && exclude.x === x && exclude.y === y) continue;
+    if (state.enemies.some(en => en.x === x && en.y === y && en.hp > 0)) continue;
+    opts.push({ x, y });
+  }
+  if (opts.length === 0) return null;
+  return opts[rand(0, opts.length - 1)];
+}
+
+function placeChild(parent, def) {
+  for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+    if (dx === 0 && dy === 0) continue;
+    const x = parent.x + dx, y = parent.y + dy;
+    if (x < 0 || x >= CFG.MAP_W || y < 0 || y >= CFG.MAP_H) continue;
+    const t = state.map[y][x];
+    if (t === TILE.WALL) continue;
+    if (state.enemies.some(en => en.x === x && en.y === y && en.hp > 0)) continue;
+    const child = makeEnemyInstance(def, x, y, state.floor);
+    child.maxHp = Math.floor((parent.maxHp || def.hp) * 0.5);
+    child.hp = child.maxHp;
+    child.splitGen = (parent.splitGen || 0) - 1;
+    child.isChild = true;
+    child.awake = true;
+    state.enemies.push(child);
+    return true;
+  }
+  return false;
+}
+
+function rangedAttackPlayer(e, dmg, particleColor) {
+  if (!lineOfSight(e, state.player)) return false;
+  const eff = Math.max(1, dmg - getPlayerDef());
+  state.player.hp -= eff;
+  spawnFloatingText(state.player.x, state.player.y, `-${eff}`, particleColor || '#fb923c');
+  spawnParticles(state.player.x, state.player.y, 8, particleColor || '#fb923c', 2.5, 22);
+  state.screenShake = Math.max(state.screenShake, 4);
+  damageArmorDur(getEquippedArmor(), dmg);
+  if (state.player.hp <= 0 && gamePhase === 'playing') {
+    state.player.hp = 0;
+    gamePhase = 'dead';
+    showDeathScreen();
+  }
+  return true;
+}
+
+// Generic damage for AoE / cone breath
+function damageEntity(entity, amount, type, ignoreDef) {
+  const def = ignoreDef ? 0 : (entity.def || 0);
+  const dealt = Math.max(1, amount - def);
+  entity.hp -= dealt;
+  spawnFloatingText(entity.x, entity.y, `-${dealt}`, type === 'fire' ? '#fb923c' : '#f87171');
+  if (entity === state.player) {
+    spawnParticles(entity.x, entity.y, 8, type === 'fire' ? '#f97316' : '#ef4444', 2.5, 20);
+    damageArmorDur(getEquippedArmor(), amount);
+    if (state.player.hp <= 0 && gamePhase === 'playing') {
+      state.player.hp = 0;
+      gamePhase = 'dead';
+      showDeathScreen();
+    }
+  } else {
+    spawnParticles(entity.x, entity.y, 6, type === 'fire' ? '#f97316' : '#ef4444', 2, 18);
+  }
+  return dealt;
+}
+
+// ─── AI BEHAVIORS ────────────────────────────
+function aiMoveOrAttack(e, pattern) {
+  const px = state.player.x, py = state.player.y;
+  if (isAdjacentForAttack({ ...e, movementPattern: pattern || e.movementPattern }, state.player)) {
+    enemyAttack(e);
+    e.energy -= ACTION_COST.ATTACK;
+    return;
+  }
+  const step = stepTowardWithPattern(e.x, e.y, px, py, pattern || e.movementPattern || MOVE_PATTERN.ORTHOGONAL, e.zigzagPhase || 0, state.enemies);
+  if (step) {
+    const ox = e.x, oy = e.y;
+    e.x = step.x; e.y = step.y;
+    e.zigzagPhase = step.newZigzagPhase || 0;
+    state.animations = state.animations.filter(a => a.entity !== e);
+    addMoveAnim(e, ox, oy);
+    e.energy -= ACTION_COST.MOVE;
+  } else {
+    e.energy -= ACTION_COST.WAIT;
+  }
+}
+
+function aiBasic(e) {
+  aiMoveOrAttack(e);
+}
+
+function aiCoward(e) {
+  if (e.hp / e.maxHp < 0.3) {
+    const flee = fleeDirection(e, state.player);
+    if (flee) {
+      const ox = e.x, oy = e.y;
+      e.x = flee.x; e.y = flee.y;
+      state.animations = state.animations.filter(a => a.entity !== e);
+      addMoveAnim(e, ox, oy);
+      e.energy -= ACTION_COST.MOVE;
+      return;
+    }
+  }
+  aiMoveOrAttack(e);
+}
+
+function aiZigzagger(e) {
+  aiMoveOrAttack(e, MOVE_PATTERN.ZIGZAG);
+}
+
+function aiFlyer(e) {
+  // 50% random diagonal step, otherwise approach diagonally
+  if (Math.random() < 0.5) {
+    const cands = getCandidateMoves(MOVE_PATTERN.DIAGONAL, 0).filter(c => {
+      const nx = e.x + c.dx, ny = e.y + c.dy;
+      if (nx < 0 || nx >= CFG.MAP_W || ny < 0 || ny >= CFG.MAP_H) return false;
+      if (state.map[ny][nx] === TILE.WALL) return false;
+      if (nx === state.player.x && ny === state.player.y) return false;
+      if (state.enemies.some(o => o !== e && o.x === nx && o.y === ny && o.hp > 0)) return false;
+      return true;
+    });
+    if (cands.length > 0) {
+      const c = cands[rand(0, cands.length - 1)];
+      const ox = e.x, oy = e.y;
+      e.x += c.dx; e.y += c.dy;
+      state.animations = state.animations.filter(a => a.entity !== e);
+      addMoveAnim(e, ox, oy);
+      e.energy -= ACTION_COST.MOVE;
+      return;
+    }
+  }
+  aiMoveOrAttack(e, MOVE_PATTERN.DIAGONAL);
+}
+
+function aiAmbusher(e) {
+  if (e.state === 'HIDDEN') {
+    if (chebyshev(e, state.player) <= (e.ambushRange || 2) && lineOfSight(e, state.player)) {
+      e.state = 'ACTIVE';
+      e.awake = true;
+      spawnParticles(e.x, e.y, 12, '#a78bfa', 2.5, 25);
+      addMessage(`A ${e.name} ambushes you!`, 'combat');
+    } else {
+      e.energy -= ACTION_COST.WAIT;
+      return;
+    }
+  }
+  aiMoveOrAttack(e);
+}
+
+function aiReviver(e) {
+  // Death-time logic happens in resurrect pass; living turn = standard chase
+  aiMoveOrAttack(e);
+}
+
+function aiPhaser(e) {
+  if (e.hp / e.maxHp < (e.vanishBelow || 0.5) && !e.vanished && !e.usedVanish) {
+    e.vanished = true;
+    e.vanishUntilTick = state.worldTick + (e.vanishTicks || 3);
+    e.usedVanish = true;
+    spawnParticles(e.x, e.y, 16, '#cbd5e1', 2.5, 30);
+    addMessage(`The Ghost vanishes!`, 'combat');
+    e.energy -= ACTION_COST.WAIT;
+    return;
+  }
+  if (e.vanished) {
+    if (state.worldTick >= e.vanishUntilTick) {
+      e.vanished = false;
+      spawnParticles(e.x, e.y, 16, '#cbd5e1', 2, 25);
+    } else {
+      e.energy -= ACTION_COST.WAIT;
+      return;
+    }
+  }
+  // Phase-walls: omnidirectional ignoring walls (we approximate by stepping toward player even through walls)
+  if (e.phaseWalls) {
+    const px = state.player.x, py = state.player.y;
+    if (isAdjacentForAttack(e, state.player)) {
       enemyAttack(e);
-    } else if (d < 10) {
-      const path = stepToward(e.x, e.y, state.player.x, state.player.y, alive);
-      if (path) {
-        const ox = e.x, oy = e.y;
-        e.x = path.x;
-        e.y = path.y;
-        addMoveAnim(e, ox, oy);
+      e.energy -= ACTION_COST.ATTACK;
+      return;
+    }
+    // Pick direction reducing chebyshev, allow walls
+    const candidates = getCandidateMoves(MOVE_PATTERN.OMNIDIRECTIONAL, 0);
+    let best = null, bestDist = chebyshev(e, state.player);
+    for (const c of candidates) {
+      const nx = e.x + c.dx, ny = e.y + c.dy;
+      if (nx < 0 || nx >= CFG.MAP_W || ny < 0 || ny >= CFG.MAP_H) continue;
+      if (nx === px && ny === py) continue;
+      if (state.enemies.some(o => o !== e && o.x === nx && o.y === ny && o.hp > 0)) continue;
+      const d = chebyshev({ x: nx, y: ny }, state.player);
+      if (d < bestDist) { bestDist = d; best = { x: nx, y: ny }; }
+    }
+    if (best) {
+      const ox = e.x, oy = e.y;
+      e.x = best.x; e.y = best.y;
+      state.animations = state.animations.filter(a => a.entity !== e);
+      addMoveAnim(e, ox, oy);
+      e.energy -= ACTION_COST.MOVE;
+      return;
+    }
+    e.energy -= ACTION_COST.WAIT;
+    return;
+  }
+  aiMoveOrAttack(e);
+}
+
+function aiThrower(e) {
+  const d = chebyshev(e, state.player);
+  if (d <= 1) { aiMoveOrAttack(e); return; }
+  if (d <= (e.throwRange || 3) && lineOfSight(e, state.player) && Math.random() < (e.throwChance || 0.35)) {
+    addMessage(`The ${e.name} throws a stone!`, 'combat');
+    rangedAttackPlayer(e, e.throwDmg || 3, '#a3a3a3');
+    e.energy -= ACTION_COST.ATTACK;
+    return;
+  }
+  aiMoveOrAttack(e);
+}
+
+function aiCharger(e) {
+  if (e.charging) {
+    // Leap up to chargeRange tiles in chargeDir
+    const dir = e.chargeDir;
+    let landed = false;
+    for (let i = 1; i <= (e.chargeRange || 3); i++) {
+      const nx = e.x + dir.x, ny = e.y + dir.y;
+      if (nx < 0 || nx >= CFG.MAP_W || ny < 0 || ny >= CFG.MAP_H) break;
+      if (state.map[ny][nx] === TILE.WALL) {
+        e.hp -= 1; // recoil
+        spawnFloatingText(e.x, e.y, '-1', '#ef4444');
+        break;
+      }
+      if (state.enemies.some(o => o !== e && o.x === nx && o.y === ny && o.hp > 0)) break;
+      const ox = e.x, oy = e.y;
+      e.x = nx; e.y = ny;
+      state.animations = state.animations.filter(a => a.entity !== e);
+      addMoveAnim(e, ox, oy);
+      if (isAdjacentForAttack(e, state.player)) { landed = true; break; }
+    }
+    if (landed) {
+      enemyAttack(e);
+    }
+    e.charging = false;
+    e.chargeDir = null;
+    e.energy -= ACTION_COST.CHARGE;
+    return;
+  }
+  // Trigger charge?
+  if (sameRowOrCol(e, state.player)) {
+    const d = chebyshev(e, state.player);
+    if (d >= 2 && d <= (e.chargeRange || 3) && lineOfSight(e, state.player)) {
+      e.charging = true;
+      e.chargeDir = { x: sign(state.player.x - e.x), y: sign(state.player.y - e.y) };
+      addMessage(`The ${e.name} prepares to charge!`, 'combat');
+      spawnParticles(e.x, e.y, 8, '#ef4444', 2, 20);
+      e.energy -= ACTION_COST.WAIT;
+      return;
+    }
+  }
+  aiMoveOrAttack(e);
+}
+
+function aiSplitter(e) {
+  // Death-handling in split pass; living = standard
+  aiMoveOrAttack(e);
+}
+
+function aiXpDrainer(e) {
+  // Drain handled in enemyAttack hook
+  aiMoveOrAttack(e);
+}
+
+function aiJuggernaut(e) {
+  aiMoveOrAttack(e);
+}
+
+function aiMimic(e) {
+  if (e.state === 'DISGUISED') {
+    if (chebyshev(e, state.player) <= (e.disguiseRange || 1)) {
+      e.state = 'ACTIVE';
+      e.awake = true;
+      addMessage('The chest was a mimic!', 'combat');
+      spawnParticles(e.x, e.y, 18, '#d97706', 3, 30);
+      enemyAttack(e); // free strike
+      e.energy -= ACTION_COST.ATTACK;
+    } else {
+      e.energy -= ACTION_COST.WAIT;
+    }
+    return;
+  }
+  aiMoveOrAttack(e);
+}
+
+function aiCaster(e) {
+  const d = chebyshev(e, state.player);
+  if (d <= (e.fleeRange || 2)) {
+    const flee = fleeDirection(e, state.player);
+    if (flee) {
+      const ox = e.x, oy = e.y;
+      e.x = flee.x; e.y = flee.y;
+      state.animations = state.animations.filter(a => a.entity !== e);
+      addMoveAnim(e, ox, oy);
+      e.energy -= ACTION_COST.MOVE;
+      return;
+    }
+  }
+  if (d <= (e.spellRange || 5) && lineOfSight(e, state.player)) {
+    if (Math.random() < 0.5) {
+      // Fireball
+      addMessage(`The ${e.name} casts a fireball!`, 'combat');
+      rangedAttackPlayer(e, e.fireDmg || 4, '#fb923c');
+    } else {
+      // Frost
+      addMessage(`The ${e.name} casts frost!`, 'combat');
+      addStatusEffect(state.player, STATUS.FREEZE, e.freezeTicks || 2, 0);
+      spawnParticles(state.player.x, state.player.y, 14, '#38bdf8', 2, 25);
+    }
+    e.energy -= ACTION_COST.ATTACK;
+    return;
+  }
+  aiMoveOrAttack(e);
+}
+
+function aiTeleporter(e) {
+  e.tpCounter = (e.tpCounter || 0) + 1;
+  if (e.tpCounter >= (e.teleportEvery || 5)) {
+    e.tpCounter = 0;
+    const tgt = randomFloorTileNear(state.player, 4, state.player);
+    if (tgt) {
+      const ox = e.x, oy = e.y;
+      e.x = tgt.x; e.y = tgt.y;
+      spawnParticles(ox, oy, 18, '#f87171', 3, 25);
+      spawnParticles(e.x, e.y, 18, '#f87171', 3, 25);
+      addMessage(`The ${e.name} teleports!`, 'combat');
+    }
+    // AoE blast
+    const r = e.aoeRadius || 2;
+    for (const t of tilesAround(e, r)) {
+      spawnParticles(t.x, t.y, 4, '#f97316', 2, 18);
+    }
+    if (chebyshev(e, state.player) <= r) {
+      damageEntity(state.player, e.aoeDmg || 6, 'fire', false);
+    }
+    e.energy -= ACTION_COST.CHARGE;
+    return;
+  }
+  aiMoveOrAttack(e);
+}
+
+function aiDragon(e) {
+  e.breathCd = e.breathCd || 0;
+  if (e.breathCd === 0 && lineOfSight(e, state.player) && chebyshev(e, state.player) <= (e.breathRange || 5)) {
+    const dir = { x: sign(state.player.x - e.x), y: sign(state.player.y - e.y) };
+    if (dir.x === 0 && dir.y === 0) dir.x = 1;
+    addMessage(`The Dragon breathes fire!`, 'combat');
+    const tiles = coneTiles(e, dir, e.breathRange || 5);
+    for (const t of tiles) {
+      spawnParticles(t.x, t.y, 4, '#f97316', 2.5, 22);
+      if (state.player.x === t.x && state.player.y === t.y) {
+        damageEntity(state.player, e.breathDmg || 8, 'fire', false);
+      }
+    }
+    e.breathCd = e.breathCooldown || 3;
+    state.screenShake = 8;
+    e.energy -= ACTION_COST.CHARGE;
+    return;
+  }
+  if (e.breathCd > 0) e.breathCd--;
+  aiMoveOrAttack(e);
+}
+
+const AI_REGISTRY = {
+  coward:      aiCoward,
+  zigzagger:   aiZigzagger,
+  flyer:       aiFlyer,
+  ambusher:    aiAmbusher,
+  reviver:     aiReviver,
+  phaser:      aiPhaser,
+  thrower:     aiThrower,
+  charger:     aiCharger,
+  splitter:    aiSplitter,
+  xpdrainer:   aiXpDrainer,
+  juggernaut:  aiJuggernaut,
+  mimic:       aiMimic,
+  caster:      aiCaster,
+  teleporter:  aiTeleporter,
+  dragon:      aiDragon,
+};
+
+function getEffectiveSpeed(entity) {
+  let mult = 1;
+  if (entity.statusEffects) {
+    for (const fx of entity.statusEffects) {
+      if (fx.type === STATUS.FREEZE) return 0;
+      if (fx.type === STATUS.SLOW) mult *= 0.5;
+      if (fx.type === STATUS.HASTE) mult *= 2;
+    }
+  }
+  return (entity.speed || SPEED.NORMAL) * mult;
+}
+
+function addStatusEffect(entity, type, ticks, magnitude) {
+  if (!entity.statusEffects) entity.statusEffects = [];
+  // Immunity check
+  if (entity.immune && Array.isArray(entity.immune) && entity.immune.includes(type)) {
+    return;
+  }
+  const existing = entity.statusEffects.find(e => e.type === type);
+  if (existing) {
+    existing.ticksLeft = Math.max(existing.ticksLeft, ticks);
+    existing.magnitude = Math.max(existing.magnitude || 0, magnitude || 0);
+    return;
+  }
+  entity.statusEffects.push({ type, ticksLeft: ticks, magnitude: magnitude || 0 });
+}
+
+function applyStatusEffects(entity) {
+  if (!entity.statusEffects) return;
+  for (const fx of entity.statusEffects) {
+    if (fx.type === STATUS.POISON) {
+      const dmg = fx.magnitude || 1;
+      entity.hp -= dmg;
+      spawnFloatingText(entity.x, entity.y, `-${dmg}`, '#4ade80');
+    } else if (fx.type === STATUS.BLEED) {
+      const dmg = fx.magnitude || 1;
+      entity.hp -= dmg;
+      spawnFloatingText(entity.x, entity.y, `-${dmg}`, '#dc2626');
+    } else if (fx.type === STATUS.REGEN) {
+      const heal = fx.magnitude || 1;
+      entity.hp = Math.min(entity.maxHp || entity.hp + heal, entity.hp + heal);
+    }
+  }
+}
+
+function tickStatusEffects() {
+  // Player
+  applyStatusEffects(state.player);
+  if (state.player.statusEffects) {
+    for (const fx of state.player.statusEffects) fx.ticksLeft--;
+    state.player.statusEffects = state.player.statusEffects.filter(fx => fx.ticksLeft > 0);
+  }
+  // Legacy poisoned counter (plan 01)
+  if (state.player.poisoned > 0) {
+    const dmg = rand(2, 4);
+    state.player.hp -= dmg;
+    state.player.poisoned--;
+    spawnFloatingText(state.player.x, state.player.y, `-${dmg}`, '#4ade80');
+  }
+  if (state.player.hp <= 0 && gamePhase === 'playing') {
+    state.player.hp = 0;
+    gamePhase = 'dead';
+    showDeathScreen();
+    return;
+  }
+  // Enemies
+  for (const e of state.enemies) {
+    if (e.hp <= 0) continue;
+    applyStatusEffects(e);
+    if (e.statusEffects) {
+      for (const fx of e.statusEffects) fx.ticksLeft--;
+      e.statusEffects = e.statusEffects.filter(fx => fx.ticksLeft > 0);
+    }
+  }
+}
+
+function enemyAct(enemy) {
+  if (enemy.hp <= 0) { enemy.energy = 0; return; }
+  // PLAN 05 — allied (necromancer): drain energy, don't act hostile (simplified)
+  if (enemy.allied) {
+    enemy.energy = 0;
+    return;
+  }
+  if (enemy.vanished && state.worldTick < (enemy.vanishUntilTick || 0)) {
+    enemy.energy -= ACTION_COST.WAIT;
+    return;
+  }
+
+  // Wake-up gating
+  if (!enemy.awake) {
+    if (state.visible.has(key(enemy.x, enemy.y))) {
+      enemy.awake = true;
+    } else if (chebyshev(enemy, state.player) <= 8 && lineOfSight(enemy, state.player)) {
+      enemy.awake = true;
+    }
+  }
+
+  // Mimic stays in DISGUISED until close — let AI drive
+  // Spider HIDDEN handled inside aiAmbusher
+  if (!enemy.awake && enemy.state !== 'DISGUISED' && enemy.state !== 'HIDDEN') {
+    enemy.energy -= ACTION_COST.WAIT;
+    return;
+  }
+
+  // Web tile check on enemy starting tile
+  if (state.webTiles.find(w => w.x === enemy.x && w.y === enemy.y)) {
+    addStatusEffect(enemy, STATUS.SLOW, 2, 0);
+  }
+
+  const fn = AI_REGISTRY[enemy.ai] || aiBasic;
+  fn(enemy);
+}
+
+function processWorld() {
+  if (gamePhase !== 'playing') return;
+  state.worldTick++;
+  state.turns++;
+
+  // PLAN 05 — card per-turn ticks BEFORE enemy actions (fire aura, ice aura, regen, tornado, allies, sprinter)
+  processCardTicks();
+  tickActiveCooldowns();
+
+  // Energy charge
+  let pSpeed = getEffectiveSpeed(state.player);
+  // Sprinter: speed +50% if 5+ combat-free turns
+  if (state.player.flags && state.player.flags.sprinter && state.player.sprinterTicks >= 5) {
+    pSpeed = Math.floor(pSpeed * 1.5);
+  }
+  state.player.energy += pSpeed;
+  for (const e of state.enemies) {
+    if (e.hp > 0) e.energy += getEffectiveSpeed(e);
+  }
+
+  // Enemy actions until exhausted
+  let safety = 64;
+  let anyActed = true;
+  while (anyActed && safety-- > 0) {
+    anyActed = false;
+    const queue = state.enemies
+      .filter(e => e.hp > 0 && e.energy >= ACTION_COST.MOVE)
+      .sort((a, b) => b.energy - a.energy);
+    for (const e of queue) {
+      if (e.hp <= 0) continue;
+      if (e.energy < ACTION_COST.MOVE) continue;
+      enemyAct(e);
+      anyActed = true;
+      if (gamePhase !== 'playing') break;
+    }
+    if (gamePhase !== 'playing') break;
+  }
+
+  // ─── RESURRECT PASS (skeleton reviver) ───
+  for (const e of state.enemies) {
+    if (e.hp > 0) continue;
+    if (e.ai !== 'reviver' || e.revived) continue;
+    const ally = nearestAlly(e, a => a.ai === 'reviver' && a.hp > 0 && !a.revived, e.reviveRange || 3);
+    if (ally) {
+      e.hp = Math.max(1, Math.floor(e.maxHp * 0.5));
+      e.revived = true;
+      addMessage(`A ${e.name} rises from the dead!`, 'combat');
+      spawnParticles(e.x, e.y, 18, '#a78bfa', 2.5, 30);
+    }
+  }
+
+  // ─── SPLIT PASS (slime splitter) ───
+  for (const e of state.enemies.slice()) {
+    if (e.hp > 0) continue;
+    if (e.ai !== 'splitter') continue;
+    if (e.splitProcessed) continue;
+    e.splitProcessed = true;
+    if ((e.splitGen || 0) <= 0) continue;
+    if (e.maxHp < (e.splitMinHp || 8)) continue;
+    const def = ENEMY_DEFS.find(d => d.key === e.key);
+    if (!def) continue;
+    let placed = 0;
+    for (let k = 0; k < 2; k++) {
+      if (placeChild(e, def)) placed++;
+    }
+    if (placed > 0) addMessage(`The ${e.name} splits!`, 'combat');
+  }
+
+  // ─── WEB EMIT PASS (spider death) ───
+  for (const e of state.enemies) {
+    if (e.hp > 0) continue;
+    if (e.webOnDeath && !e.webEmitted) {
+      e.webEmitted = true;
+      state.webTiles.push({ x: e.x, y: e.y, ttl: 30 });
+    }
+  }
+
+  // ─── WEB TICK ───
+  if (state.webTiles && state.webTiles.length > 0) {
+    for (const w of state.webTiles) w.ttl--;
+    state.webTiles = state.webTiles.filter(w => w.ttl > 0);
+  }
+
+  // Player web check
+  if (state.webTiles.find(w => w.x === state.player.x && w.y === state.player.y)) {
+    addStatusEffect(state.player, STATUS.SLOW, 2, 0);
+  }
+
+  tickStatusEffects();
+  if (gamePhase !== 'playing') return;
+
+  state.visible = computePlayerFOV();
+  markExplored();
+  state.enemies = state.enemies.filter(e => e.hp > 0);
+}
+
+// Wait-action alias (kept for keybinding compatibility)
+function endTurn() {
+  if (gamePhase !== 'playing') return;
+  if (state.choosingCard) return;
+  state.player.energy -= ACTION_COST.WAIT;
+  processWorld();
+}
+
+function triggerTrap(trap) {
+  trap.triggered = true;
+  trap.revealed = true;
+  const dmgRoll = trap.dmg && trap.dmg[1] > 0 ? rand(trap.dmg[0], trap.dmg[1]) : 0;
+  state.screenShake = Math.max(state.screenShake, 4);
+
+  if (trap.type === 'spike') {
+    const dmg = Math.max(1, dmgRoll - state.player.def);
+    state.player.hp -= dmg;
+    spawnParticles(state.player.x, state.player.y, 12, trap.color, 2.5, 22);
+    spawnFloatingText(state.player.x, state.player.y, `-${dmg}`, '#ef4444');
+    addMessage(trap.msg.replace('{dmg}', dmg), 'combat');
+  } else if (trap.type === 'pit') {
+    if (state.floor < CFG.MAX_FLOOR) {
+      addMessage(`${trap.msg} You fall to floor ${state.floor + 1}!`, 'descend');
+      state.floor++;
+      enterFloor(state.floor);
+      return;
+    } else {
+      const dmg = 5;
+      state.player.hp -= dmg;
+      spawnFloatingText(state.player.x, state.player.y, `-${dmg}`, '#ef4444');
+      addMessage(`${trap.msg} You barely catch yourself! ${dmg} damage.`, 'combat');
+    }
+  } else if (trap.type === 'explosion') {
+    const dmg = Math.max(1, dmgRoll - state.player.def);
+    state.player.hp -= dmg;
+    spawnParticles(trap.x, trap.y, 30, trap.color, 4, 40);
+    spawnFloatingText(state.player.x, state.player.y, `-${dmg}`, '#f97316');
+    addMessage(trap.msg + ` ${dmg} damage!`, 'combat');
+    state.screenShake = 8;
+    // AoE
+    for (const e of state.enemies) {
+      if (e.hp <= 0) continue;
+      const ed = dist(e.x, e.y, trap.x, trap.y);
+      if (ed <= trap.aoeRadius) {
+        const aoeDmg = Math.max(1, dmgRoll - (e.def || 0));
+        e.hp -= aoeDmg;
+        e.awake = true;
+        spawnFloatingText(e.x, e.y, `-${aoeDmg}`, '#f97316');
+        if (e.hp <= 0) {
+          state.kills++;
+          gainXP(e.xp);
+          onEnemyKilled(e);
+        }
+      }
+    }
+  } else if (trap.type === 'poison') {
+    state.player.poisoned = trap.poisonTurns || 5;
+    spawnParticles(trap.x, trap.y, 20, trap.color, 1.5, 30);
+    addMessage(trap.msg + ' You are poisoned!', 'combat');
+  } else if (trap.type === 'alarm') {
+    addMessage(trap.msg + ' Enemies are alerted!', 'combat');
+    spawnParticles(trap.x, trap.y, 16, trap.color, 2, 30);
+    for (const e of state.enemies) {
+      if (e.hp <= 0) continue;
+      const ed = dist(e.x, e.y, trap.x, trap.y);
+      if (ed <= trap.aoeRadius) {
+        e.awake = true;
+        if (e.state === 'HIDDEN') e.state = 'ACTIVE'; // F1 fix (future-proof)
       }
     }
   }
 
-  state.enemies = state.enemies.filter(e => e.hp > 0);
-}
-
-function stepToward(ex, ey, px, py, allEnemies) {
-  let bestDx = 0, bestDy = 0, bestDist = 999;
-  for (let dx = -1; dx <= 1; dx++) {
-    for (let dy = -1; dy <= 1; dy++) {
-      if (dx === 0 && dy === 0) continue;
-      if (Math.abs(dx) + Math.abs(dy) > 1) continue;
-      const nx = ex + dx, ny = ey + dy;
-      if (nx < 0 || nx >= CFG.MAP_W || ny < 0 || ny >= CFG.MAP_H) continue;
-      if (state.map[ny][nx] === TILE.WALL) continue;
-      if (nx === px && ny === py) continue;
-      if (allEnemies.some(e => e.x === nx && e.y === ny && !(e.x === ex && e.y === ey))) continue;
-      const d = dist(nx, ny, px, py);
-      if (d < bestDist) { bestDist = d; bestDx = dx; bestDy = dy; }
-    }
+  if (state.player.hp <= 0 && gamePhase === 'playing') {
+    state.player.hp = 0;
+    gamePhase = 'dead';
+    showDeathScreen();
   }
-  if (bestDx === 0 && bestDy === 0) return null;
-  return { x: ex + bestDx, y: ey + bestDy };
 }
 
 // ─── RENDERING ──────────────────────────────────
@@ -1210,6 +3756,9 @@ function render(time) {
 
       if (!isExplored) continue;
 
+      const tileRoom = getRoomAt(tx, ty);
+      const tileInLitRoom = tileRoom && tileRoom.lit;
+
       let baseColor;
       if (tile === TILE.WALL) {
         baseColor = colorVariant(COLORS.wallBase, tx, ty, state.seed, 6);
@@ -1217,14 +3766,24 @@ function render(time) {
         baseColor = [50, 40, 20];
       } else if (tile === TILE.CORRIDOR) {
         baseColor = colorVariant(COLORS.corridorBase, tx, ty, state.seed, 4);
+      } else if (tileInLitRoom) {
+        baseColor = colorVariant(COLORS.litRoomFloor, tx, ty, state.seed, 6);
       } else {
         baseColor = colorVariant(COLORS.floorBase, tx, ty, state.seed, 5);
       }
 
+      const playerRoom = getRoomAt(state.player.x, state.player.y);
+      const playerInLit = playerRoom && playerRoom.lit;
+      const tr = effectiveTorchRadius();
+
       let lightMult = 0;
       if (isVisible) {
         const pd = dist(tx, ty, state.player.x, state.player.y);
-        lightMult = Math.max(0, 1 - (pd / (CFG.FOV_RADIUS + 1)) ** 1.5) * 0.6;
+        if (playerInLit && tileRoom === playerRoom) {
+          lightMult = Math.max(0.55, 1 - (pd / 20) * 0.3);
+        } else {
+          lightMult = Math.max(0, 1 - (pd / (tr + 1)) ** 1.5) * 0.6;
+        }
 
         for (const torch of state.torches) {
           const td = dist(tx, ty, torch.x, torch.y);
@@ -1237,7 +3796,7 @@ function render(time) {
 
         lightMult = clamp(lightMult, 0.15, 1);
       } else {
-        lightMult = 0.12;
+        lightMult = 0.08;
       }
 
       const r = Math.floor(baseColor[0] * lightMult);
@@ -1274,6 +3833,18 @@ function render(time) {
         ctx.fillText('>', sx + T / 2, sy + T / 2 + 1);
         ctx.restore();
       }
+
+      if (tile === TILE.ANVIL && isVisible) {
+        ctx.save();
+        const pulse = 1 + Math.sin(time * 0.005) * 0.06;
+        ctx.shadowColor = '#fbbf24';
+        ctx.shadowBlur = 10;
+        ctx.font = `${(T - 4) * pulse}px ${EMOJI_FONT}`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('⚒️', sx + T / 2, sy + T / 2 + 1);
+        ctx.restore();
+      }
     }
   }
 
@@ -1306,6 +3877,22 @@ function render(time) {
     }
   }
 
+  // --- Web tiles ---
+  if (state.webTiles && state.webTiles.length > 0) {
+    for (const w of state.webTiles) {
+      if (!state.visible.has(key(w.x, w.y))) continue;
+      const sx = w.x * T + offsetX + T / 2;
+      const sy = w.y * T + offsetY + T / 2;
+      ctx.save();
+      ctx.globalAlpha = Math.min(0.6, (w.ttl || 0) / 30);
+      ctx.font = `${T - 6}px ${EMOJI_FONT}`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('🕸️', sx, sy + 1);
+      ctx.restore();
+    }
+  }
+
   // --- Ground items ---
   for (const item of state.groundItems) {
     if (!state.visible.has(key(item.x, item.y))) continue;
@@ -1313,19 +3900,60 @@ function render(time) {
     const sy = item.y * T + offsetY + T / 2;
 
     ctx.save();
-    ctx.shadowColor = item.color;
+    ctx.shadowColor = item.color || 'rgba(255,255,255,0.4)';
     ctx.shadowBlur = 8;
-    ctx.fillStyle = item.color;
-    ctx.font = `bold ${T - 6}px 'JetBrains Mono', monospace`;
+    ctx.font = `${T - 4}px ${EMOJI_FONT}`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(item.ch, sx, sy + 1);
+    if (item.emoji) {
+      ctx.fillText(item.emoji, sx, sy + 1);
+    } else if (item.ch) {
+      ctx.fillStyle = item.color || '#fff';
+      ctx.font = `bold ${T - 6}px 'JetBrains Mono', monospace`;
+      ctx.fillText(item.ch, sx, sy + 1);
+    }
     ctx.restore();
+  }
+
+  // --- Traps ---
+  if (state.traps) {
+    for (const trap of state.traps) {
+      if (!state.explored[trap.y][trap.x]) continue;
+      const isVis = state.visible.has(key(trap.x, trap.y));
+      if (trap.triggered) {
+        // faded glyph (revealed/spent)
+        const sx = trap.x * T + offsetX + T / 2;
+        const sy = trap.y * T + offsetY + T / 2;
+        ctx.save();
+        ctx.globalAlpha = 0.35;
+        ctx.fillStyle = trap.color;
+        ctx.font = `bold ${T - 8}px 'JetBrains Mono', monospace`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(trap.ch, sx, sy + 1);
+        ctx.restore();
+      } else if (trap.revealed && isVis) {
+        const sx = trap.x * T + offsetX + T / 2;
+        const sy = trap.y * T + offsetY + T / 2;
+        const pulse = 0.6 + Math.sin(time * 0.005) * 0.4;
+        ctx.save();
+        ctx.shadowColor = trap.color;
+        ctx.shadowBlur = 10 * pulse;
+        ctx.globalAlpha = 0.6 + 0.4 * pulse;
+        ctx.fillStyle = trap.color;
+        ctx.font = `bold ${T - 6}px 'JetBrains Mono', monospace`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(trap.ch, sx, sy + 1);
+        ctx.restore();
+      }
+    }
   }
 
   // --- Enemies ---
   for (const e of state.enemies) {
     if (e.hp <= 0) continue;
+    if (e.vanished) continue; // ghost vanished — don't render
     if (!state.visible.has(key(e.x, e.y))) continue;
 
     let ex = e.x, ey = e.y;
@@ -1340,17 +3968,32 @@ function render(time) {
     const sy = ey * T + offsetY + T / 2;
 
     ctx.save();
-    ctx.shadowColor = e.color;
+    ctx.shadowColor = e.color || '#ef4444';
     ctx.shadowBlur = 6;
-    ctx.fillStyle = e.color;
-    ctx.font = `bold ${T - 4}px 'JetBrains Mono', monospace`;
+    if (e.state === 'HIDDEN') ctx.globalAlpha = 0.35;
+    ctx.font = `${T - 2}px ${EMOJI_FONT}`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(e.ch, sx, sy + 1);
+    const renderEmoji = (e.state === 'DISGUISED' && e.disguise) ? e.disguise : (e.emoji || e.ch || '?');
+    ctx.fillText(renderEmoji, sx, sy + 1);
     ctx.restore();
 
+    // Charging telegraph
+    if (e.charging && e.chargeDir) {
+      ctx.save();
+      ctx.fillStyle = 'rgba(239,68,68,0.6)';
+      ctx.shadowColor = '#ef4444';
+      ctx.shadowBlur = 8;
+      ctx.font = `bold 14px 'JetBrains Mono', monospace`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      const arrow = e.chargeDir.x > 0 ? '→' : e.chargeDir.x < 0 ? '←' : e.chargeDir.y > 0 ? '↓' : '↑';
+      ctx.fillText(arrow, sx + e.chargeDir.x * T * 0.5, sy + e.chargeDir.y * T * 0.5);
+      ctx.restore();
+    }
+
     const hpPct = e.hp / e.maxHp;
-    if (hpPct < 1) {
+    if (hpPct < 1 && e.state !== 'HIDDEN' && e.state !== 'DISGUISED') {
       const barW = T - 4;
       const barH = 3;
       const bx = ex * T + offsetX + 2;
@@ -1442,10 +4085,13 @@ function render(time) {
     }
   }
 
-  // --- Vignette ---
+  // --- Vignette (dynamic) ---
+  const _playerRoom = getRoomAt(state.player.x, state.player.y);
+  const _playerInLit = _playerRoom && _playerRoom.lit;
+  const vigAlpha = _playerInLit ? 0.45 : 0.75;
   const vigGrad = ctx.createRadialGradient(cw / 2, ch / 2, cw * 0.3, cw / 2, ch / 2, cw * 0.7);
   vigGrad.addColorStop(0, 'rgba(5,5,10,0)');
-  vigGrad.addColorStop(1, 'rgba(5,5,10,0.6)');
+  vigGrad.addColorStop(1, `rgba(5,5,10,${vigAlpha})`);
   ctx.fillStyle = vigGrad;
   ctx.fillRect(0, 0, cw, ch);
 
@@ -1471,33 +4117,113 @@ function renderTitleBG(time) {
   }
 }
 
+function durBarColor(pct) {
+  if (pct > 0.6) return '#22c55e';
+  if (pct > 0.25) return '#f59e0b';
+  return '#ef4444';
+}
+
 function updateUI() {
   const p = state.player;
   document.getElementById('hp-fill').style.width = `${(p.hp / p.maxHp) * 100}%`;
   document.getElementById('hp-text').textContent = `${p.hp} / ${p.maxHp}`;
   document.getElementById('xp-fill').style.width = `${(p.xp / p.xpNext) * 100}%`;
   document.getElementById('s-level').textContent = p.level;
-  document.getElementById('s-atk').textContent = p.atk;
-  document.getElementById('s-def').textContent = p.def;
+  document.getElementById('s-atk').textContent = getPlayerAtk();
+  document.getElementById('s-def').textContent = getPlayerDef();
   document.getElementById('s-floor').textContent = state.floor;
   document.getElementById('s-kills').textContent = state.kills;
+  const torchEl = document.getElementById('s-torch');
+  if (torchEl) torchEl.textContent = effectiveTorchRadius();
+  const poisonEl = document.getElementById('s-poison');
+  if (poisonEl) poisonEl.textContent = p.poisoned > 0 ? `${p.poisoned}t` : '—';
 
   const msgEl = document.getElementById('message-log');
   msgEl.innerHTML = state.messages.map((m, i) =>
     `<div class="msg-line msg-${m.type} ${i > 0 ? 'old' : ''}">${m.text}</div>`
   ).join('');
 
+  // ─── EQUIPMENT BAR ───
+  const eqEl = document.getElementById('equipment-bar');
+  if (eqEl) {
+    const slotMeta = [
+      { key: 'weapon',     label: 'WPN' },
+      { key: 'armor',      label: 'ARM' },
+      { key: 'offhand',    label: 'OFF' },
+      { key: 'accessory1', label: 'AC1' },
+      { key: 'accessory2', label: 'AC2' },
+    ];
+    let eqHtml = '';
+    for (const sm of slotMeta) {
+      const it = p.equipment[sm.key];
+      if (!it) {
+        eqHtml += `<div class="equip-slot empty" data-eq="${sm.key}"><span class="slot-label">${sm.label}</span></div>`;
+      } else {
+        const broken = (it.dur != null && it.dur <= 0);
+        let durBar = '';
+        if (it.maxDur) {
+          const pct = (it.dur / it.maxDur);
+          durBar = `<div class="dur-bar"><div class="dur-fill" style="width:${pct*100}%; background:${durBarColor(pct)}"></div></div>`;
+        }
+        const title = `${it.name}${it.maxDur ? ` (${it.dur}/${it.maxDur})` : ''}`;
+        eqHtml += `<div class="equip-slot ${broken ? 'broken':''}" data-eq="${sm.key}" title="${title}"><span class="slot-label">${sm.label}</span><span class="emoji">${it.emoji || '?'}</span>${durBar}</div>`;
+      }
+    }
+    eqEl.innerHTML = eqHtml;
+  }
+
   const invEl = document.getElementById('inventory-bar');
   let invHtml = '';
   for (let i = 0; i < CFG.INV_SIZE; i++) {
     const item = state.inventory[i];
+    const keyHint = (i === 9) ? '0' : `${i + 1}`;
     if (item) {
-      invHtml += `<div class="inv-slot has-item" title="${item.name}"><span class="key-hint">${i + 1}</span><span style="color:${item.color}">${item.ch}</span></div>`;
+      const broken = (item.dur != null && item.dur <= 0);
+      let durBar = '';
+      if (item.maxDur) {
+        const pct = (item.dur / item.maxDur);
+        durBar = `<div class="dur-bar"><div class="dur-fill" style="width:${pct*100}%; background:${durBarColor(pct)}"></div></div>`;
+      }
+      const title = `${item.name}${item.maxDur ? ` (${item.dur}/${item.maxDur})` : ''}`;
+      invHtml += `<div class="inv-slot has-item ${broken ? 'broken':''}" title="${title}"><span class="key-hint">${keyHint}</span><span class="emoji">${item.emoji || item.ch || ''}</span>${durBar}</div>`;
     } else {
-      invHtml += `<div class="inv-slot"><span class="key-hint">${i + 1}</span></div>`;
+      invHtml += `<div class="inv-slot"><span class="key-hint">${keyHint}</span></div>`;
     }
   }
   invEl.innerHTML = invHtml;
+
+  // PLAN 05 — CARDS ROW
+  const cardsEl = document.getElementById('cards-row');
+  if (cardsEl) {
+    const cardsHtml = (state.cards || []).map(c => {
+      const def = findCardDef(c.id);
+      if (!def) return '';
+      const stackStr = (def.maxStacks || 1) > 1 ? toRoman(c.stacks) : '';
+      const desc = def.descriptionFn ? def.descriptionFn(c.stacks) : def.description;
+      return `<span class="card-icon tier-${def.tier}" title="${def.name}${stackStr?' '+stackStr:''} — ${desc}">${def.emoji}${stackStr?`<span class="stack-num">${stackStr}</span>`:''}</span>`;
+    }).join('');
+    cardsEl.innerHTML = cardsHtml;
+  }
+
+  // PLAN 05 — ACTIVE SKILLS BAR
+  const skillsEl = document.getElementById('active-skills-row');
+  if (skillsEl) {
+    let html = '';
+    for (let slot = 0; slot < 2; slot++) {
+      const keyHint = slot === 0 ? 'Q' : 'E';
+      const skill = state.activeSkills.find(s => s.slot === slot);
+      if (!skill) {
+        html += `<div class="skill-slot empty"><span class="key-hint">${keyHint}</span></div>`;
+      } else {
+        const def = findCardDef(skill.id);
+        const onCd = skill.cdRemaining > 0;
+        const cls = onCd ? 'cd' : 'ready';
+        const cdAttr = onCd ? `data-cd="${skill.cdRemaining}"` : '';
+        html += `<div class="skill-slot ${cls}" ${cdAttr} title="${def?def.name:''} (${keyHint})"><span class="key-hint">${keyHint}</span>${def?def.emoji:'?'}</div>`;
+      }
+    }
+    skillsEl.innerHTML = html;
+  }
 }
 
 function renderMinimap() {
@@ -1514,7 +4240,15 @@ function renderMinimap() {
       if (tile === TILE.WALL) continue;
 
       const isVis = state.visible.has(key(x, y));
-      minimapCtx.fillStyle = isVis ? 'rgba(100, 100, 120, 0.7)' : 'rgba(60, 60, 80, 0.4)';
+      const room = getRoomAt(x, y);
+      const litRoom = room && room.lit;
+      let color;
+      if (litRoom) {
+        color = isVis ? 'rgba(200, 160, 60, 0.8)' : 'rgba(120, 90, 30, 0.5)';
+      } else {
+        color = isVis ? 'rgba(100, 100, 120, 0.7)' : 'rgba(60, 60, 80, 0.4)';
+      }
+      minimapCtx.fillStyle = color;
       minimapCtx.fillRect(x * scaleX, y * scaleY, Math.max(1, scaleX), Math.max(1, scaleY));
     }
   }
@@ -1572,7 +4306,8 @@ function updateMobileUI() {
   for (let i = 0; i < CFG.INV_SIZE; i++) {
     const item = state.inventory[i];
     if (item) {
-      html += `<div class="inv-slot has-item" data-slot="${i}"><span style="color:${item.color}">${item.ch}</span></div>`;
+      const broken = (item.dur != null && item.dur <= 0);
+      html += `<div class="inv-slot has-item ${broken ? 'broken':''}" data-slot="${i}"><span class="emoji">${item.emoji || item.ch || ''}</span></div>`;
     } else {
       html += `<div class="inv-slot" data-slot="${i}"></div>`;
     }
@@ -1587,12 +4322,8 @@ const KEY_MAP = {
   W: [0, -1], S: [0, 1], A: [-1, 0], D: [1, 0],
 };
 
-let inputCooldown = 0;
-let keysDown = {};
-
+// Plan 02: 1 input = 1 action, native browser keydown repeat is OK.
 document.addEventListener('keydown', (e) => {
-  keysDown[e.key] = true;
-
   if (gamePhase === 'title' && (e.key === 'Enter' || e.key === ' ')) {
     e.preventDefault();
     gamePhase = 'playing';
@@ -1610,41 +4341,69 @@ document.addEventListener('keydown', (e) => {
   }
 
   if (gamePhase !== 'playing') return;
-  if (inputCooldown > 0) return;
+
+  // PLAN 05 — card modal hotkeys (block other inputs)
+  if (state.choosingCard) {
+    if (e.key === '1' || e.key === '2' || e.key === '3') {
+      e.preventDefault();
+      pickCard(parseInt(e.key) - 1);
+      return;
+    }
+    if (e.key === 'r' || e.key === 'R') {
+      e.preventDefault();
+      rerollCards();
+      return;
+    }
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      skipCard();
+      return;
+    }
+    return; // block other input
+  }
 
   if (KEY_MAP[e.key]) {
     e.preventDefault();
     const [dx, dy] = KEY_MAP[e.key];
     tryMove(dx, dy);
-    inputCooldown = 6;
     return;
   }
 
-  if (e.key === ' ') { e.preventDefault(); endTurn(); inputCooldown = 6; return; }
-  if (e.key === 'g' || e.key === 'G') { pickupItem(); inputCooldown = 6; return; }
-  if (e.key === '>' || e.key === '.') { descendStairs(); inputCooldown = 6; return; }
-
-  const num = parseInt(e.key);
-  if (num >= 1 && num <= 5) { useItem(num - 1); inputCooldown = 6; return; }
-});
-
-document.addEventListener('keyup', (e) => {
-  keysDown[e.key] = false;
-});
-
-setInterval(() => {
-  if (inputCooldown > 0) inputCooldown--;
-  if (gamePhase !== 'playing') return;
-
-  for (const k of Object.keys(KEY_MAP)) {
-    if (keysDown[k] && inputCooldown <= 0) {
-      const [dx, dy] = KEY_MAP[k];
-      tryMove(dx, dy);
-      inputCooldown = 4;
-      return;
+  if (e.key === ' ') { e.preventDefault(); endTurn(); return; }
+  if (e.key === 'g' || e.key === 'G') { pickupItem(); return; }
+  if (e.key === '>' || e.key === '.') { descendStairs(); return; }
+  if (e.key === 'q' || e.key === 'Q') { e.preventDefault(); useActiveSkill(0); return; }
+  if (e.key === 'e' || e.key === 'E') { e.preventDefault(); useActiveSkill(1); return; }
+  if (e.key === 'r' || e.key === 'R') {
+    const onAnvil = state.anvils && state.anvils.find(a => a.x === state.player.x && a.y === state.player.y && !a.used);
+    if (onAnvil) {
+      repairAt(state.player.x, state.player.y);
+      state.player.energy -= ACTION_COST.WAIT;
+      processWorld();
+    } else {
+      addMessage('No anvil here.', 'info');
     }
+    return;
   }
-}, 1000 / 30);
+
+  if (e.key === '0') { useItem(9); return; }
+  const num = parseInt(e.key);
+  if (num >= 1 && num <= 9) { useItem(num - 1); return; }
+});
+
+// PLAN 05 — wire modal action buttons (script runs at end of body — DOM already parsed)
+{
+  const rerollBtn = document.getElementById('card-reroll');
+  const skipBtn = document.getElementById('card-skip');
+  if (rerollBtn) {
+    rerollBtn.addEventListener('click', () => rerollCards());
+    rerollBtn.addEventListener('touchstart', (e) => { e.preventDefault(); rerollCards(); }, { passive: false });
+  }
+  if (skipBtn) {
+    skipBtn.addEventListener('click', () => skipCard());
+    skipBtn.addEventListener('touchstart', (e) => { e.preventDefault(); skipCard(); }, { passive: false });
+  }
+}
 
 // ─── MOBILE / TOUCH ─────────────────────────────
 if (isMobile) {
@@ -1699,6 +4458,16 @@ document.querySelectorAll('.action-btn').forEach(btn => {
     if (action === 'pickup') pickupItem();
     else if (action === 'stairs') descendStairs();
     else if (action === 'wait') { endTurn(); }
+    else if (action === 'repair') {
+      const onAnvil = state.anvils && state.anvils.find(a => a.x === state.player.x && a.y === state.player.y && !a.used);
+      if (onAnvil) {
+        repairAt(state.player.x, state.player.y);
+        state.player.energy -= ACTION_COST.WAIT;
+        processWorld();
+      } else {
+        addMessage('No anvil here.', 'info');
+      }
+    }
   }, { passive: false });
 
   btn.addEventListener('touchend', (e) => {
@@ -1722,6 +4491,14 @@ document.getElementById('inventory-bar').addEventListener('click', (e) => {
   if (!slot || gamePhase !== 'playing') return;
   const idx = Array.from(slot.parentElement.children).indexOf(slot);
   if (idx >= 0 && idx < state.inventory.length) useItem(idx);
+});
+
+// Equipment bar — click slot to unequip
+document.getElementById('equipment-bar').addEventListener('click', (e) => {
+  const sl = e.target.closest('.equip-slot');
+  if (!sl || gamePhase !== 'playing') return;
+  const slotName = sl.dataset.eq;
+  if (slotName) unequipItem(slotName);
 });
 
 // Title/death/win screen tap
@@ -1755,18 +4532,36 @@ canvas.addEventListener('touchstart', (e) => {
 
 canvas.addEventListener('touchend', (e) => {
   if (!swipeStart || gamePhase !== 'playing') return;
-  const dx = e.changedTouches[0].clientX - swipeStart.x;
-  const dy = e.changedTouches[0].clientY - swipeStart.y;
+  const tx = e.changedTouches[0].clientX;
+  const ty = e.changedTouches[0].clientY;
+  const dx = tx - swipeStart.x;
+  const dy = ty - swipeStart.y;
   const dt = Date.now() - swipeStart.t;
+  const startTouch = swipeStart;
   swipeStart = null;
   if (dt > 500) return;
   const absDx = Math.abs(dx), absDy = Math.abs(dy);
-  if (absDx < SWIPE_THRESHOLD && absDy < SWIPE_THRESHOLD) return;
-  if (absDx > absDy) {
-    tryMove(dx > 0 ? 1 : -1, 0);
-  } else {
-    tryMove(0, dy > 0 ? 1 : -1);
+  if (absDx >= SWIPE_THRESHOLD || absDy >= SWIPE_THRESHOLD) {
+    if (absDx > absDy) {
+      tryMove(dx > 0 ? 1 : -1, 0);
+    } else {
+      tryMove(0, dy > 0 ? 1 : -1);
+    }
+    return;
   }
+  // Tap-to-move: figure out which tile was tapped and move toward it (one step).
+  const T = CFG.TILE;
+  const cw = window.innerWidth, ch = window.innerHeight;
+  const mobileShift = isMobile ? ch * 0.12 : 0;
+  const offsetX = cw / 2 - state.camera.x * T - T / 2;
+  const offsetY = ch / 2 - state.camera.y * T - T / 2 - mobileShift;
+  const tileX = Math.floor((tx - offsetX) / T);
+  const tileY = Math.floor((ty - offsetY) / T);
+  if (tileX === state.player.x && tileY === state.player.y) return;
+  const sgn = (v) => v === 0 ? 0 : (v > 0 ? 1 : -1);
+  const ndx = sgn(tileX - state.player.x);
+  const ndy = sgn(tileY - state.player.y);
+  if (ndx !== 0 || ndy !== 0) tryMove(ndx, ndy);
 }, { passive: true });
 
 // Prevent zoom/scroll

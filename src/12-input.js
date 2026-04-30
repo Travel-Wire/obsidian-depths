@@ -60,6 +60,18 @@ document.addEventListener('keydown', (e) => {
 
   if (gamePhase !== 'playing') return;
 
+  // v4-02 — fusion modal hotkeys (block other inputs)
+  const fusionModalEl = document.getElementById('fusion-modal');
+  const fusionModalOpen = fusionModalEl && !fusionModalEl.classList.contains('hidden');
+  if (fusionModalOpen) {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      if (typeof closeFusionModal === 'function') closeFusionModal();
+      return;
+    }
+    return; // block other input
+  }
+
   // PLAN 05 — card modal hotkeys (block other inputs)
   if (state.choosingCard) {
     if (e.key === '1' || e.key === '2' || e.key === '3') {
@@ -98,6 +110,17 @@ document.addEventListener('keydown', (e) => {
       repairAt(state.player.x, state.player.y);
       state.player.energy -= ACTION_COST.WAIT;
       processWorld();
+    } else {
+      addMessage('No anvil here.', 'info');
+    }
+    return;
+  }
+  // v4-02 — F on anvil opens Fusion modal (Fuse tab default).
+  if (e.key === 'f' || e.key === 'F') {
+    const onAnvil = state.anvils && state.anvils.find(a => a.x === state.player.x && a.y === state.player.y && !a.used);
+    if (onAnvil) {
+      e.preventDefault();
+      if (typeof openFusionModal === 'function') openFusionModal('Fuse');
     } else {
       addMessage('No anvil here.', 'info');
     }
@@ -173,6 +196,21 @@ document.addEventListener('keydown', (e) => {
   }
 }
 
+// v4-02 — wire fusion modal close + backdrop click
+{
+  const fmodal = document.getElementById('fusion-modal');
+  const fclose = document.getElementById('fusion-close');
+  if (fclose) {
+    fclose.addEventListener('click', () => { if (typeof closeFusionModal === 'function') closeFusionModal(); });
+    fclose.addEventListener('touchstart', (e) => { e.preventDefault(); if (typeof closeFusionModal === 'function') closeFusionModal(); }, { passive: false });
+  }
+  if (fmodal) {
+    fmodal.addEventListener('click', (e) => {
+      if (e.target === fmodal) { if (typeof closeFusionModal === 'function') closeFusionModal(); }
+    });
+  }
+}
+
 // ─── MOBILE / TOUCH ─────────────────────────────
 if (isMobile) {
   document.getElementById('title-prompt-text').textContent = 'Tap to begin';
@@ -227,11 +265,10 @@ document.querySelectorAll('.action-btn').forEach(btn => {
     else if (action === 'stairs') descendStairs();
     else if (action === 'wait') { endTurn(); }
     else if (action === 'repair') {
+      // v4-02 — opens unified anvil modal (Repair / Fuse tabs).
       const onAnvil = state.anvils && state.anvils.find(a => a.x === state.player.x && a.y === state.player.y && !a.used);
       if (onAnvil) {
-        repairAt(state.player.x, state.player.y);
-        state.player.energy -= ACTION_COST.WAIT;
-        processWorld();
+        if (typeof openFusionModal === 'function') openFusionModal('Repair');
       } else {
         addMessage('No anvil here.', 'info');
       }

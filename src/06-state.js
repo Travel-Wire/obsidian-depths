@@ -128,6 +128,9 @@ function newState() {
     floorEnteredHp: 0,
     floorEnteredTurn: 0,
     curseActive: false,
+
+    // ─── v4-02 — Fusion ───
+    fusionPending: null, // { primaryIdx, secondaryIdx, outcomes:[3], highlightId, anvilXY }
   };
 }
 
@@ -143,6 +146,8 @@ function makeItemInstance(def, extra) {
     inst.maxDur = def.maxDur;
   }
   inst.instanceId = ++state.nextItemId;
+  // v4-02 — every equippable instance starts at upgradeLevel 0.
+  if (def.slot) inst.upgradeLevel = 0;
   if (extra) Object.assign(inst, extra);
   return inst;
 }
@@ -392,6 +397,108 @@ function equipStartingGear() {
   const robes = findItemDef('tattered_robes');
   if (dagger) state.player.equipment.weapon = makeItemInstance(dagger);
   if (robes)  state.player.equipment.armor  = makeItemInstance(robes);
+}
+
+// ─── v4-02 FUSION HELPERS ───────────────────────
+// Returns { ok, reason } — checks if 2 inventory items can be fused.
+function canFuse(a, b) {
+  if (!a || !b) return { ok: false, reason: 'Missing item.' };
+  if (a === b) return { ok: false, reason: 'Pick two different items.' };
+  if (!a.slot || !b.slot) return { ok: false, reason: 'Only equipment can be fused.' };
+  if (a.id !== b.id) return { ok: false, reason: 'Items must be the same type.' };
+  if ((a.upgradeLevel || 0) !== (b.upgradeLevel || 0)) {
+    return { ok: false, reason: 'Both items must have the same upgrade level.' };
+  }
+  if ((a.upgradeLevel || 0) >= 5) return { ok: false, reason: 'Already maxed (+5).' };
+  if (typeof TIER !== 'undefined' && a.tier === TIER.LEGENDARY) {
+    return { ok: false, reason: 'Legendary items cannot be fused.' };
+  }
+  if (a.dur === 0) return { ok: false, reason: 'Repair primary before fusion.' };
+  return { ok: true };
+}
+
+// Find pair candidates in inventory: returns array of [idxA, idxB] for
+// every fusible pair (same id, same upgradeLevel, neither broken-as-primary).
+function findFusionPairs() {
+  const pairs = [];
+  const inv = state.inventory;
+  for (let i = 0; i < inv.length; i++) {
+    for (let j = i + 1; j < inv.length; j++) {
+      const r = canFuse(inv[i], inv[j]);
+      if (r.ok) pairs.push([i, j]);
+    }
+  }
+  return pairs;
+}
+
+// Open the fusion preview — rolls outcomes and stashes in state.fusionPending.
+// Caller (UI) should re-render modal afterwards.
+function prepareFusion(primaryIdx, secondaryIdx) {
+  const inv = state.inventory;
+  const a = inv[primaryIdx], b = inv[secondaryIdx];
+  const r = canFuse(a, b);
+  if (!r.ok) {
+    addMessage(r.reason, 'info');
+    return null;
+  }
+  const outcomes = previewFusionOutcomes();
+  const highlight = outcomes.find(o => o.highlighted);
+  state.fusionPending = {
+    primaryIdx, secondaryIdx,
+    outcomes,
+    highlightId: highlight ? highlight.id : null,
+  };
+  return state.fusionPending;
+}
+
+function cancelFusion() {
+  state.fusionPending = null;
+}
+
+// Confirm and apply the prepared fusion. Consumes 1 anvil use.
+function confirmFusion(anvilX, anvilY) {
+  const fp = state.fusionPending;
+  if (!fp) return;
+  const inv = state.inventory;
+  const primary = inv[fp.primaryIdx];
+  const secondary = inv[fp.secondaryIdx];
+  if (!primary || !secondary) {
+    state.fusionPending = null;
+    return;
+  }
+  const outcome = fp.outcomes.find(o => o.id === fp.highlightId) || fp.outcomes[0];
+  const res = applyFusionOutcome(primary, outcome);
+
+  // Remove secondary from inventory (and primary too if brick)
+  // Splice higher index first so indices stay stable.
+  const sortIdx = [fp.primaryIdx, fp.secondaryIdx].sort((x, y) => y - x);
+  if (res.brick) {
+    // Both destroyed
+    for (const idx of sortIdx) inv.splice(idx, 1);
+    addMessage('💔 The metal shatters! Both items destroyed.', 'combat');
+    spawnParticles(state.player.x, state.player.y, 20, '#94a3b8', 2, 30);
+    spawnFloatingText(state.player.x, state.player.y, '💔 SHATTERED', '#ef4444');
+    state.screenShake = Math.max(state.screenShake || 0, 6);
+  } else {
+    // Remove only secondary
+    inv.splice(fp.secondaryIdx, 1);
+    addMessage(`Fusion success! ${primary.name} +${primary.upgradeLevel} (${outcome.label})`, 'pickup');
+    spawnParticles(state.player.x, state.player.y, 30, '#fbbf24', 3, 40);
+    spawnFloatingText(state.player.x, state.player.y, `+${primary.upgradeLevel}`, '#fbbf24');
+  }
+
+  // Consume anvil use (mark used like repair).
+  if (typeof anvilX === 'number' && typeof anvilY === 'number') {
+    const anv = state.anvils.find(an => an.x === anvilX && an.y === anvilY && !an.used);
+    if (anv) {
+      anv.used = true;
+      state.map[anvilY][anvilX] = TILE.FLOOR;
+    }
+  }
+
+  state.fusionPending = null;
+  if (typeof recomputeStats === 'function') recomputeStats();
+  state.dirty = true;
 }
 
 function addMessage(text, type = 'info') {
